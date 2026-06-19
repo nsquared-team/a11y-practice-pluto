@@ -1,0 +1,326 @@
+/* ============================================================
+   Global styles for the Pluto a11y-practice site.
+   The base design is intentionally accessible. A handful of
+   utility classes at the bottom create DELIBERATE color-contrast
+   failures used by content pages — see ISSUES.md.
+   ============================================================ */
+
+:root {
+  --space-black: #0b0c1a;
+  --space-deep: #14162b;
+  --space-panel: #1d2040;
+  --ink: #1a1a1a;
+  --paper: #ffffff;
+  --accent: #6b4fd6;
+  --accent-ink: #2f1f73;
+  --link: #1a4fd6;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  line-height: 1.6;
+  color: var(--ink);
+  background: var(--paper);
+}
+
+body {
+  margin: 0;
+}
+
+/* Skip link — accessible baseline (visible on focus) */
+.skip-link {
+  position: absolute;
+  left: -999px;
+  top: 0;
+  background: var(--accent-ink);
+  color: #fff;
+  padding: 0.5rem 1rem;
+  z-index: 100;
+}
+.skip-link:focus {
+  left: 0;
+}
+
+/* Header / nav */
+.site-header {
+  background: var(--space-black);
+  color: #fff;
+  padding: 1rem 1.5rem;
+}
+.site-header a {
+  color: #fff;
+}
+.brand {
+  font-size: 1.4rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+.main-nav .nav-top {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 1rem;
+  padding: 0;
+  margin: 0.75rem 0 0;
+}
+.main-nav .nav-top > li {
+  position: relative;
+}
+.main-nav a {
+  text-decoration: none;
+  padding: 0.25rem 0.4rem;
+  border-radius: 4px;
+}
+.main-nav .nav-top > li > a:hover,
+.main-nav .nav-top > li > a:focus {
+  background: var(--space-panel);
+  text-decoration: underline;
+}
+
+/* Dropdown toggles — styled to match the nav links */
+.dropdown-toggle {
+  font: inherit;
+  color: #fff;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  padding: 0.25rem 0.4rem;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.dropdown-toggle:hover,
+.dropdown-toggle:focus {
+  background: var(--space-panel);
+  text-decoration: underline;
+}
+/* Decorative caret as a CSS border-triangle (no text node, so scanners don't
+   flag it for contrast review) */
+.dropdown-toggle::after {
+  content: "";
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid currentColor;
+}
+
+/* Dropdown panels. When closed they are clipped to 1px (visually hidden) but
+   kept in the accessibility tree — NOT display:none — so the seeded role="menu"
+   issue stays scannable. They expand on hover / keyboard focus-within. */
+.dropdown-menu {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: var(--space-panel);
+  border-radius: 6px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+  z-index: 50;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+}
+.has-dropdown:hover .dropdown-menu,
+.has-dropdown:focus-within .dropdown-menu {
+  width: auto;
+  height: auto;
+  min-width: 190px;
+  padding: 0.4rem 0;
+  overflow: visible;
+  clip: auto;
+  clip-path: none;
+}
+.dropdown-menu li {
+  display: block;
+}
+.dropdown-menu a {
+  display: block;
+  padding: 0.4rem 1rem;
+  color: #fff;
+  text-decoration: none;
+  white-space: nowrap;
+  border-radius: 0;
+}
+.dropdown-menu a:hover,
+.dropdown-menu a:focus {
+  background: var(--space-deep);
+  text-decoration: underline;
+}
+
+/* Layout containers */
+main {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+.page-hero {
+  background: linear-gradient(160deg, var(--space-deep), var(--space-black));
+  color: #fff;
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+}
+.page-hero h1 {
+  margin: 0 0 0.5rem;
+}
+/* Readable hero tagline — light text on the dark hero (passes contrast) */
+.hero-tagline {
+  margin: 0 auto 1.5rem;
+  max-width: 36rem;
+  color: #d4d8f0;
+  font-size: 1.1rem;
+}
+
+a {
+  color: var(--link);
+}
+
+figure {
+  margin: 1.5rem 0;
+}
+figure img,
+.content-img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+}
+figcaption {
+  font-size: 0.9rem;
+  color: #555;
+  margin-top: 0.4rem;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1.5rem 0;
+}
+th,
+td {
+  border: 1px solid #ccc;
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+}
+th {
+  background: #eef0f8;
+}
+
+.callout {
+  border-left: 4px solid var(--accent);
+  background: #f4f2fc;
+  padding: 1rem 1.25rem;
+  margin: 1.5rem 0;
+  border-radius: 0 6px 6px 0;
+}
+
+.timeline {
+  list-style: none;
+  padding: 0;
+}
+.timeline li,
+.timeline .entry {
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #e2e2ea;
+}
+.year {
+  font-weight: 700;
+  color: var(--accent-ink);
+  margin-right: 0.75rem;
+}
+
+.site-footer {
+  background: var(--space-black);
+  color: #cfd2e6;
+  padding: 2rem 1.5rem;
+  text-align: center;
+  font-size: 0.9rem;
+}
+.site-footer a {
+  color: #fff;
+}
+
+/* ---- confirmation / results message boxes (subscribe + search) ---- */
+.message-box {
+  border-radius: 8px;
+  padding: 1.5rem 1.75rem;
+  margin: 1.5rem 0 2rem;
+}
+.message-box h1 {
+  margin-top: 0.25rem;
+}
+.message-box > p:last-child {
+  margin-bottom: 0;
+}
+.message-box.success {
+  background: #eaf7ee;
+  border: 1px solid #46a35e;
+  border-left: 6px solid #2e7d46;
+}
+.message-box.success h1 {
+  color: #14502c; /* dark green on pale green — passes contrast */
+}
+.message-box.info {
+  background: #eef2fb;
+  border: 1px solid #6b82c0;
+  border-left: 6px solid #3d56a6;
+}
+
+/* Success badge: a green disc with a checkmark drawn from borders (no text
+   node, so it doesn't add a color-contrast "needs review" item). */
+.success-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 50%;
+  background: #2e7d46;
+}
+.success-badge::after {
+  content: "";
+  width: 0.55rem;
+  height: 1rem;
+  margin-top: -0.2rem;
+  border: solid #fff;
+  border-width: 0 3px 3px 0;
+  transform: rotate(45deg);
+}
+
+/* ---- gallery grid ---- */
+.img-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1rem;
+}
+.img-grid img {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
+/* ============================================================
+   DELIBERATE low-contrast utilities (seeded color-contrast
+   failures). Each fails WCAG 1.4.3 against a white background.
+   ============================================================ */
+.muted-fail {
+  color: #b9b9b9; /* ~1.9:1 on #fff — FAILS */
+}
+.callout-fail {
+  background: #f4f2fc;
+  color: #b3aede; /* very low contrast on the light panel — FAILS */
+}
+.year-fail {
+  color: #c2c2c2; /* FAILS */
+  font-weight: 700;
+}

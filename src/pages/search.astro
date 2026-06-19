@@ -1,0 +1,41 @@
+---
+// Search results page (reached via the GET search form on /contact).
+// This is a static demo, so there is no live search index — the page shows a
+// friendly placeholder and echoes the query. Intentionally CLEAN content (the
+// shared nav's two seeds still appear here, as on every page).
+import Layout from '../layouts/Layout.astro';
+---
+<Layout title="Search Results" description="Search Discover Pluto.">
+  <h1>Search results</h1>
+
+  <div class="message-box info">
+    <!-- Progressively enhanced: shows the submitted query. -->
+    <p id="search-query" hidden></p>
+    <p>
+      <strong>Discover Pluto</strong> is an educational demo, so live search isn't
+      wired up here. But everything on the site is just a click away — try the
+      navigation menu, or one of the popular topics below.
+    </p>
+  </div>
+
+  <h2>Popular topics</h2>
+  <ul>
+    <li><a href="/about">About Pluto</a> — the essentials</li>
+    <li><a href="/discovery">Discovery</a> — how Pluto was found in 1930</li>
+    <li><a href="/demotion">Demotion</a> — why Pluto became a dwarf planet</li>
+    <li><a href="/orbit">Orbit</a> — Pluto's strange, tilted path</li>
+    <li><a href="/new-horizons">New Horizons</a> — the 2015 flyby</li>
+  </ul>
+
+  <p><a href="/">&larr; Back to the home page</a></p>
+
+  <script is:inline>
+    // Echo the search term if one was submitted (textContent avoids HTML injection).
+    const q = new URLSearchParams(window.location.search).get('q');
+    if (q && q.trim()) {
+      const el = document.getElementById('search-query');
+      el.textContent = 'You searched for "' + q + '".';
+      el.hidden = false;
+    }
+  </script>
+</Layout>

@@ -1,0 +1,63 @@
+---
+// EXPLORATION — how we have studied Pluto from afar.
+// Seeded issues:
+//   * embedded <iframe> with no title             (frame-title)
+//   * content image missing alt                    (image-alt)
+//   * thumbnail link with no accessible name        (link-name)
+import Layout from '../layouts/Layout.astro';
+---
+<Layout title="Exploring Pluto" description="Telescopes, missed flybys, and the long-distance study of Pluto.">
+  <h1>Exploring Pluto From Afar</h1>
+  <p>
+    No spacecraft has ever landed on Pluto, and only one has ever visited it.
+    Almost everything we knew about Pluto for most of its history came from
+    patient observation across billions of kilometres of space.
+  </p>
+
+  <h2>The telescope era</h2>
+  <p>
+    For decades Pluto was studied only as a faint point of light. The Hubble
+    Space Telescope produced the first crude surface maps in the 1990s and
+    2000s, resolving Pluto into little more than a few blurry light and dark
+    patches. Ground-based telescopes measured its atmosphere by watching how
+    Pluto dimmed the light of distant stars as it passed in front of them.
+  </p>
+
+  <!-- Content image deliberately missing alt (image-alt) -->
+  <figure>
+    <img src="/images/pluto-true-color.jpg" width="320" class="content-img" />
+    <figcaption>The kind of detail only achievable up close — impossible from Earth.</figcaption>
+  </figure>
+
+  <h2>The flyby that almost was</h2>
+  <p>
+    NASA's Voyager 1, launched in 1977, could in principle have been routed past
+    Pluto. Mission planners instead chose a close flyby of Saturn's giant moon
+    Titan, which sent Voyager 1 out of the plane of the planets and made a Pluto
+    encounter impossible. Pluto would have to wait nearly 40 more years for a
+    visitor.
+  </p>
+
+  <h2>Watch: a tour of the Pluto system</h2>
+  <!-- Embedded video iframe with NO title attribute (frame-title) -->
+  <iframe
+    src="https://www.youtube-nocookie.com/embed/-nMFCz0pFFY"
+    width="560"
+    height="315"
+    style="max-width:100%;border:0;"
+    allowfullscreen>
+  </iframe>
+
+  <h2>The mission that finally went</h2>
+  <p>
+    Everything changed in 2015, when the New Horizons spacecraft swept past Pluto
+    after a nine-year journey.
+  </p>
+  <!-- Thumbnail link with no accessible name: img has empty alt and is the
+       link's only content (link-name) -->
+  <p>
+    <a href="/new-horizons">
+      <img src="/images/new-horizons-spacecraft.png" width="120" alt="" />
+    </a>
+  </p>
+</Layout>

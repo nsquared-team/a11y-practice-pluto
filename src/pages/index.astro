@@ -1,0 +1,79 @@
+---
+// HOME PAGE — intentionally a standalone document that bypasses the
+// clean Layout in order to seed document-level structural issues:
+//   * <html> has NO lang attribute        (html-has-lang)
+//   * NO <title> element                   (document-title)
+//   * NO <main> landmark; content in divs  (landmark-one-main / region)
+//   * heading jumps h1 -> h3               (heading-order)
+//   * hero image missing alt               (image-alt)
+//   * low-contrast lead paragraph on white (color-contrast)
+//   * image-only link has no text          (link-name)
+import Nav from '../components/Nav.astro';
+import '../styles/global.css';
+---
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Discover Pluto — explore the dwarf planet Pluto." />
+  </head>
+  <body>
+    <!-- No skip link here: this page deliberately has no <main> target, and a
+         skip link pointing at a missing #main would be its own (unintended)
+         violation. Headings still provide a bypass mechanism. -->
+    <Nav />
+
+    <!-- No main landmark: page content lives in plain divs (seeded issue) -->
+    <div class="page-hero">
+      <h1>Welcome to Discover Pluto</h1>
+      <p class="hero-tagline">Your guide to the Solar System's most famous dwarf planet.</p>
+      <!-- Hero image deliberately missing alt -->
+      <img src="/images/pluto-true-color.jpg" width="360" class="content-img" />
+    </div>
+
+    <div class="page-body" style="max-width:820px;margin:0 auto;padding:2rem 1.5rem;">
+      <!-- Skipped heading level: h1 above, h3 here (no h2) -->
+      <h3>A tiny world, a giant story</h3>
+      <!-- Low-contrast lead paragraph on a solid white background (color-contrast).
+           This seed lives in the body, NOT on the gradient hero, so scanners
+           compute a reliable failure instead of an "incomplete" result. -->
+      <p class="muted-fail">
+        Pluto is a small, icy world orbiting the Sun far beyond Neptune in a
+        region called the Kuiper Belt — the most famous of the Solar System's
+        five recognised dwarf planets.
+      </p>
+      <p>
+        Discovered in 1930, it was counted as the ninth planet for 76 years
+        before being reclassified as a <strong>dwarf planet</strong> in 2006.
+        Despite its small size, Pluto has a complex surface of nitrogen ice
+        plains, towering water-ice mountains, a thin atmosphere, and five known
+        moons.
+      </p>
+
+      <h2>Start exploring</h2>
+      <ul>
+        <li><a href="/about">General information about Pluto</a></li>
+        <li><a href="/discovery">How Pluto was discovered</a></li>
+        <li><a href="/demotion">Why Pluto was demoted</a></li>
+        <li><a href="/orbit">Pluto's strange orbit</a></li>
+        <li><a href="/new-horizons">The New Horizons flyby</a></li>
+      </ul>
+
+      <!-- Image-only link with no discernible text: the img has empty alt and
+           is the link's only content, so the link has no accessible name
+           (link-name). Empty alt keeps this from also firing image-alt. -->
+      <p>Featured topic:
+        <a href="/orbit"><img src="/images/pluto-blue-haze.jpg" width="120" alt="" /></a>
+      </p>
+    </div>
+
+    <footer class="site-footer">
+      <p>
+        Discover Pluto is an educational demo. Images courtesy of
+        <a href="https://www.nasa.gov/">NASA</a> /
+        <a href="https://commons.wikimedia.org/">Wikimedia Commons</a> (public domain).
+      </p>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,36 @@
+---
+// Clean, accessible base layout used by most content pages.
+// (The home page deliberately bypasses this layout to seed
+// document-level structural issues — see ISSUES.md.)
+import Nav from '../components/Nav.astro';
+import '../styles/global.css';
+
+interface Props {
+  title: string;
+  description?: string;
+}
+const { title, description = 'Learn about the dwarf planet Pluto.' } = Astro.props;
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <title>{title} — Discover Pluto</title>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to main content</a>
+    <Nav />
+    <main id="main">
+      <slot />
+    </main>
+    <footer class="site-footer">
+      <p>
+        Discover Pluto is an educational demo. Images courtesy of
+        <a href="https://www.nasa.gov/">NASA</a> /
+        <a href="https://commons.wikimedia.org/">Wikimedia Commons</a> (public domain).
+      </p>
+    </footer>
+  </body>
+</html>

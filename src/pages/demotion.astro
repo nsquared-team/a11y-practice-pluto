@@ -1,0 +1,56 @@
+---
+// DEMOTION — the 2006 reclassification to dwarf planet.
+// Seeded issues:
+//   * image missing alt                  (image-alt)
+//   * quoted definition fails contrast    (color-contrast)
+//   * positive tabindex on a box          (tabindex)
+import Layout from '../layouts/Layout.astro';
+---
+<Layout title="Pluto's Demotion" description="Why the IAU reclassified Pluto as a dwarf planet in 2006.">
+  <h1>From Planet to Dwarf Planet</h1>
+  <p>
+    On 24 August 2006, at a meeting in Prague, the International Astronomical
+    Union (IAU) voted to adopt a formal definition of the word "planet" for the
+    first time. Under the new definition, Pluto no longer qualified.
+  </p>
+
+  <h2>The three rules of being a planet</h2>
+  <p>The IAU decided that, to be a planet, a body in the Solar System must:</p>
+  <ol>
+    <li>orbit the Sun;</li>
+    <li>be massive enough for its own gravity to pull it into a round shape;</li>
+    <li>have "cleared the neighbourhood" around its orbit of other objects.</li>
+  </ol>
+
+  <!-- Positive tabindex disrupts focus order (tabindex) -->
+  <div class="callout" tabindex="5">
+    Pluto meets the first two rules, but <strong>not the third</strong>. It
+    shares the crowded Kuiper Belt with countless other icy bodies, so it has not
+    "cleared its neighbourhood." Bodies that meet rules 1 and 2 but not 3 are
+    called <em>dwarf planets</em>.
+  </div>
+
+  <!-- Image deliberately missing alt -->
+  <figure>
+    <img src="/images/charon-true-color.jpg" width="360" class="content-img" />
+    <figcaption>
+      Charon, Pluto's largest moon — so big that some argue Pluto-Charon is a
+      "double dwarf planet."
+    </figcaption>
+  </figure>
+
+  <h2>A controversial vote</h2>
+  <!-- Low-contrast pull quote (color-contrast) -->
+  <blockquote class="muted-fail">
+    "Eight planets and a swarm of dwarf planets — that's a Solar System I can
+    live with." Not everyone agreed. The vote was contested, and many
+    researchers and members of the public still argue Pluto deserves planet
+    status today.
+  </blockquote>
+
+  <p>
+    Today Pluto is the best-known of five officially recognised dwarf planets,
+    alongside Ceres, Haumea, Makemake, and Eris. Learn about
+    <a href="/orbit">what makes Pluto's orbit so unusual</a>.
+  </p>
+</Layout>
