@@ -1,0 +1,39 @@
+---
+// Newsletter confirmation page (reached via the GET form on /contact).
+// This page is intentionally CLEAN — no seeded content issues. (The shared
+// nav's two seeds still appear here, as on every page.)
+import Layout from '../layouts/Layout.astro';
+---
+<Layout title="You're Subscribed" description="Thanks for subscribing to Discover Pluto updates.">
+  <div class="message-box success">
+    <span class="success-badge" aria-hidden="true"></span>
+    <h1>You're subscribed!</h1>
+    <p>
+      Thanks for signing up for <strong>Discover Pluto</strong> updates. We'll send
+      you occasional news about the dwarf planet at the edge of the Solar System —
+      new missions, fresh images, and the science behind Pluto.
+    </p>
+    <!-- Progressively enhanced: confirms the address if the form provided one. -->
+    <p id="subscribe-confirm" hidden></p>
+  </div>
+
+  <h2>While you're here</h2>
+  <ul>
+    <li><a href="/about">Get the basics on Pluto</a></li>
+    <li><a href="/new-horizons">Read about the New Horizons flyby</a></li>
+    <li><a href="/facts">Browse interesting Pluto facts</a></li>
+  </ul>
+
+  <p><a href="/">&larr; Back to the home page</a></p>
+
+  <script is:inline>
+    // If the newsletter form passed an email address, echo it back.
+    // textContent (not innerHTML) keeps user input from being interpreted as HTML.
+    const email = new URLSearchParams(window.location.search).get('email');
+    if (email) {
+      const el = document.getElementById('subscribe-confirm');
+      el.textContent = 'A confirmation will be sent to ' + email + '.';
+      el.hidden = false;
+    }
+  </script>
+</Layout>

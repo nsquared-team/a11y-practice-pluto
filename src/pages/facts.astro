@@ -1,0 +1,49 @@
+---
+// FACTS — interesting facts about Pluto.
+// Seeded issues:
+//   * deprecated <marquee> scrolling element     (marquee)
+//   * <dl> with an invalid child element          (definition-list)
+//   * low-contrast intro text                     (color-contrast)
+import Layout from '../layouts/Layout.astro';
+---
+<Layout title="Pluto Facts" description="Surprising and interesting facts about the dwarf planet Pluto.">
+  <h1>Interesting Pluto Facts</h1>
+
+  <!-- Low-contrast intro paragraph (color-contrast) -->
+  <p class="muted-fail">
+    Small, distant, and deeply strange — Pluto keeps surprising the scientists
+    who study it. Here are some of the most remarkable things we know.
+  </p>
+
+  <!-- Deprecated scrolling marquee element (marquee) -->
+  <marquee behavior="scroll" direction="left">
+    ☃ It snows on Pluto — but the snow is red! ☃ A year on Pluto lasts 248 Earth years ☃ Pluto has mountains made of water ice ☃
+  </marquee>
+
+  <h2>A heart on its surface</h2>
+  <p>
+    Pluto's most famous feature is a vast, bright, heart-shaped region now called
+    Tombaugh Regio. Its left lobe, Sputnik Planitia, is a 1,000-km-wide plain of
+    nitrogen ice that slowly churns and resurfaces itself.
+  </p>
+
+  <h2>Fast facts</h2>
+  <!-- Definition list containing an invalid child (<p>) — definition-list rule -->
+  <dl>
+    <dt>Smaller than you think</dt>
+    <dd>Pluto is only about two-thirds the width of Earth's Moon.</dd>
+    <dt>A long, long year</dt>
+    <dd>Pluto takes 248 Earth years to orbit the Sun once. It has not completed a single orbit since it was discovered in 1930.</dd>
+    <dt>Five moons</dt>
+    <dd>Charon, Styx, Nix, Kerberos, and Hydra.</dd>
+    <p>All of these facts come from a combination of telescope observations and the 2015 New Horizons flyby.</p>
+  </dl>
+
+  <h2>More strange truths</h2>
+  <ul>
+    <li>Pluto's atmosphere is blue, just like Earth's, though for different reasons.</li>
+    <li>From Pluto, the Sun would look like a very bright star, not a disc.</li>
+    <li>Pluto and its moon Charon always show each other the same face — they are mutually tidally locked.</li>
+    <li>Pluto is one of the most reflective bodies in the Solar System, because its surface is coated in fresh ice.</li>
+  </ul>
+</Layout>

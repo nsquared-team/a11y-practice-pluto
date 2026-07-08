@@ -1,0 +1,66 @@
+---
+// STAY UPDATED — a newsletter / contact form.
+// Seeded issues (form-focused):
+//   * text input with no associated label        (label)
+//   * <select> with no accessible name             (select-name)
+//   * submit <button> with no text                 (button-name)
+//   * <input type="image"> with no alt             (input-image-alt)
+//   * invalid autocomplete token                   (autocomplete-valid)
+import Layout from '../layouts/Layout.astro';
+---
+<Layout title="Stay Updated" description="Sign up for Pluto news and updates.">
+  <h1>Stay Updated</h1>
+  <p>
+    Want the latest Pluto news? Search the site or sign up for our occasional
+    newsletter below.
+  </p>
+
+  <!-- Site search: input type="image" submit has NO alt (input-image-alt) -->
+  <form action="/search" method="get" role="search" style="margin:1.5rem 0;">
+    <label for="site-search">Search Discover Pluto</label><br />
+    <input type="text" id="site-search" name="q" />
+    <input type="image" src="/images/pluto-blue-haze.jpg" width="32" height="32" />
+  </form>
+
+  <h2>Newsletter sign-up</h2>
+  <!-- GET so the static /subscribe confirmation page loads on submit -->
+  <form action="/subscribe" method="get">
+    <p>
+      <!-- Visible text cue, but NOT a programmatic <label> and NO placeholder,
+           so the field has no accessible name (label). NB: a placeholder-only
+           input would NOT trip axe, because axe treats the placeholder as the
+           accessible name. -->
+      Your name
+      <input type="text" name="name" />
+    </p>
+
+    <p>
+      <label for="email">Email address</label><br />
+      <!-- Invalid autocomplete value (autocomplete-valid) -->
+      <input type="email" id="email" name="email" autocomplete="yes-please" />
+    </p>
+
+    <p>
+      <!-- Select with NO label and no accessible name (select-name) -->
+      <select name="interest">
+        <option value="">What are you most interested in?</option>
+        <option value="missions">Missions &amp; spacecraft</option>
+        <option value="science">Science &amp; geology</option>
+        <option value="history">History &amp; discovery</option>
+      </select>
+    </p>
+
+    <p>
+      <!-- Submit button with NO text content (button-name) -->
+      <button type="submit" class="icon-btn"
+        style="width:44px;height:44px;background:#6b4fd6;border:0;border-radius:6px;"></button>
+    </p>
+  </form>
+
+  <h2>Get in touch</h2>
+  <p>
+    Questions about Discover Pluto? This is an educational demo site, but you can
+    read more on the <a href="/about">About Pluto</a> page or explore the
+    <a href="/new-horizons">New Horizons mission</a>.
+  </p>
+</Layout>

@@ -1,0 +1,64 @@
+---
+// Shared site navigation — five top-level items, with three grouped
+// dropdown menus. The nav is rendered on every page.
+//
+// SEEDED a11y issues (intentional; they repeat on every page because the
+// nav is shared — see ISSUES.md):
+//   * each dropdown toggle sets aria-expanded="closed", which is an INVALID
+//     value (the only valid values are "true" / "false")  (aria-valid-attr-value)
+//   * each dropdown panel uses role="menu" but its children are plain links,
+//     not role="menuitem"                                  (aria-required-children)
+const groups = [
+  {
+    label: 'About',
+    id: 'menu-about',
+    items: [
+      { href: '/about', label: 'About Pluto' },
+      { href: '/facts', label: 'Facts' },
+      { href: '/orbit', label: 'Orbit' },
+      { href: '/moons', label: 'Moons' },
+      { href: '/geology', label: 'Geology' },
+    ],
+  },
+  {
+    label: 'History',
+    id: 'menu-history',
+    items: [
+      { href: '/discovery', label: 'Discovery' },
+      { href: '/planet-status', label: 'Planet Years' },
+      { href: '/demotion', label: 'Demotion' },
+    ],
+  },
+  {
+    label: 'Exploration',
+    id: 'menu-exploration',
+    items: [
+      { href: '/exploration', label: 'Exploration' },
+      { href: '/new-horizons', label: 'New Horizons' },
+    ],
+  },
+];
+---
+<header class="site-header">
+  <a href="/" class="brand">Discover&nbsp;Pluto</a>
+  <nav class="main-nav" aria-label="Primary">
+    <ul class="nav-top">
+      <li><a href="/">Home</a></li>
+      {groups.map((g) => (
+        <li class="has-dropdown">
+          <!-- aria-expanded="closed" is invalid (aria-valid-attr-value) -->
+          <button type="button" class="dropdown-toggle" aria-expanded="closed" aria-controls={g.id}>
+            {g.label}
+          </button>
+          <!-- role="menu" but children are plain links (aria-required-children) -->
+          <ul id={g.id} class="dropdown-menu" role="menu">
+            {g.items.map((it) => (
+              <li role="none"><a href={it.href}>{it.label}</a></li>
+            ))}
+          </ul>
+        </li>
+      ))}
+      <li><a href="/contact">Stay Updated</a></li>
+    </ul>
+  </nav>
+</header>

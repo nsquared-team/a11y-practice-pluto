@@ -1,0 +1,60 @@
+---
+// MOONS — Pluto's five known moons.
+// Seeded issues:
+//   * animated system image missing alt          (image-alt)
+//   * moons table has an empty header cell         (empty-table-header)
+//   * low-contrast caption text                    (color-contrast)
+import Layout from '../layouts/Layout.astro';
+---
+<Layout title="Pluto's Moons" description="Charon, Styx, Nix, Kerberos, and Hydra — the five moons of Pluto.">
+  <h1>The Moons of Pluto</h1>
+  <p>
+    Pluto has five known moons. By far the largest is Charon; the other four —
+    Styx, Nix, Kerberos, and Hydra — are small and irregularly shaped. All were
+    discovered between 1978 and 2012.
+  </p>
+
+  <!-- Animated system image deliberately missing alt (image-alt) -->
+  <figure>
+    <img src="/images/pluto-charon-system.gif" width="440" class="content-img" />
+    <!-- Low-contrast caption (color-contrast) -->
+    <figcaption class="muted-fail">
+      Pluto and Charon orbit a shared centre of gravity that lies in the empty
+      space between them.
+    </figcaption>
+  </figure>
+
+  <h2>A double world</h2>
+  <p>
+    Charon is so large relative to Pluto — about half its diameter — that the
+    two bodies orbit a point in space between them, rather than Charon simply
+    circling Pluto. For this reason, the pair is sometimes described as a
+    "double dwarf planet."
+  </p>
+
+  <h2>The five moons</h2>
+  <!-- Table with an EMPTY header cell (empty-table-header) -->
+  <table>
+    <caption>Pluto's moons by size and discovery</caption>
+    <thead>
+      <tr>
+        <th>Moon</th>
+        <th>Approx. diameter</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>Charon</td><td>1,212 km</td><td>1978</td></tr>
+      <tr><td>Hydra</td><td>51 km</td><td>2005</td></tr>
+      <tr><td>Nix</td><td>50 km</td><td>2005</td></tr>
+      <tr><td>Kerberos</td><td>19 km</td><td>2011</td></tr>
+      <tr><td>Styx</td><td>16 km</td><td>2012</td></tr>
+    </tbody>
+  </table>
+
+  <p>
+    The four small moons spin chaotically, tumbling unpredictably as they are
+    tugged by the gravity of both Pluto and Charon. They are thought to be
+    fragments left over from an ancient collision that also created Charon.
+  </p>
+</Layout>

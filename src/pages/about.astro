@@ -1,0 +1,65 @@
+---
+// ABOUT PLUTO — general information.
+// Seeded issues:
+//   * content image missing alt          (image-alt)
+//   * "fast facts" callout low contrast  (color-contrast)
+//   * data table with an empty <th>       (empty-table-header)
+//   * heading jumps h2 -> h4              (heading-order)
+import Layout from '../layouts/Layout.astro';
+---
+<Layout title="About Pluto" description="General information about the dwarf planet Pluto.">
+  <h1>About Pluto</h1>
+  <p>
+    Pluto is a dwarf planet in the Kuiper Belt, a ring of icy bodies beyond the
+    orbit of Neptune. With a diameter of about 2,377 kilometres, Pluto is smaller
+    than Earth's Moon. It is made of a mixture of rock and ice and has a surface
+    coated in frozen nitrogen, methane, and carbon monoxide.
+  </p>
+
+  <!-- Content image deliberately missing alt -->
+  <figure>
+    <img src="/images/pluto-true-color.jpg" width="420" class="content-img" />
+    <figcaption>Pluto in approximately true colour, imaged by New Horizons in 2015.</figcaption>
+  </figure>
+
+  <h2>Physical characteristics</h2>
+  <p>
+    Pluto is extraordinarily cold, with surface temperatures around −229 °C. Its
+    thin atmosphere of nitrogen, methane, and carbon monoxide expands as Pluto
+    nears the Sun and collapses back to the surface as it moves away.
+  </p>
+
+  <!-- Data table with an EMPTY header cell (empty-table-header) -->
+  <table>
+    <caption>Pluto at a glance</caption>
+    <thead>
+      <tr>
+        <th>Property</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>Diameter</td><td>2,377 km</td></tr>
+      <tr><td>Mass</td><td>1.30 × 10²² kg (0.0022 Earths)</td></tr>
+      <tr><td>Average distance from Sun</td><td>5.9 billion km (39.5 AU)</td></tr>
+      <tr><td>Orbital period</td><td>248 Earth years</td></tr>
+      <tr><td>Day length</td><td>6.4 Earth days</td></tr>
+      <tr><td>Known moons</td><td>5</td></tr>
+    </tbody>
+  </table>
+
+  <!-- Skipped heading level: h2 above, h4 here (no h3) -->
+  <h4>Composition</h4>
+  <p>
+    Models suggest Pluto has a rocky core surrounded by a mantle of water ice,
+    possibly including a subsurface liquid-water ocean. The core makes up the
+    majority of Pluto's mass.
+  </p>
+
+  <!-- Low-contrast "fast facts" callout (color-contrast) -->
+  <aside class="callout callout-fail">
+    <strong>Fast fact:</strong> Pluto is so far from the Sun that sunlight takes
+    more than five hours to reach it — yet at noon, Pluto is still hundreds of
+    times brighter than a full moon on Earth.
+  </aside>
+</Layout>

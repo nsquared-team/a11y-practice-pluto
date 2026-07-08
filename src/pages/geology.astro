@@ -1,0 +1,56 @@
+---
+// GEOLOGY — Pluto's surface features.
+// Seeded issues:
+//   * Sputnik Planitia image missing alt    (image-alt)
+//   * heading jumps h2 -> h4                  (heading-order)
+//   * low-contrast aside                      (color-contrast)
+import Layout from '../layouts/Layout.astro';
+---
+<Layout title="Pluto's Geology" description="Nitrogen ice plains, water-ice mountains, and the surprising surface of Pluto.">
+  <h1>The Surface of Pluto</h1>
+  <p>
+    Before 2015, Pluto was little more than a blurry dot. The New Horizons flyby
+    revealed a stunningly varied and surprisingly young surface, with towering
+    mountains, glacial plains, and possible ice volcanoes.
+  </p>
+
+  <!-- Sputnik Planitia image deliberately missing alt (image-alt) -->
+  <figure>
+    <img src="/images/pluto-sputnik-planitia.jpg" width="520" class="content-img" />
+    <figcaption>
+      High-resolution view of Pluto, dominated by the bright Sputnik Planitia
+      ice plain.
+    </figcaption>
+  </figure>
+
+  <h2>Sputnik Planitia: a sea of ice</h2>
+  <p>
+    The western lobe of Pluto's "heart" is Sputnik Planitia, a vast basin filled
+    with frozen nitrogen. Its surface is divided into polygonal cells, each tens
+    of kilometres across, created as the nitrogen ice slowly convects — warmer
+    ice rising from below and cooler ice sinking. The plain has almost no impact
+    craters, meaning it is constantly being resurfaced and is geologically young.
+  </p>
+
+  <!-- Skipped heading level: h2 above, h4 here (no h3) -->
+  <h4>Mountains of ice</h4>
+  <p>
+    Bordering the plains are mountains rising as high as 3,500 metres. At Pluto's
+    frigid temperatures, water ice behaves like rock, and these peaks are
+    essentially mountains made of frozen water "floating" on a sea of softer
+    nitrogen ice.
+  </p>
+
+  <h2>Ice volcanoes</h2>
+  <p>
+    Two large features, Wright Mons and Piccard Mons, may be cryovolcanoes —
+    volcanoes that erupt slushy ice instead of molten rock. If confirmed, they
+    would be some of the largest known ice volcanoes in the Solar System.
+  </p>
+
+  <!-- Low-contrast aside (color-contrast) -->
+  <aside class="callout callout-fail">
+    Pluto's thin atmosphere produces dozens of layers of blue haze, and may even
+    create a faint nitrogen "snow" or frost that coats the highlands in white.
+  </aside>
+</Layout>

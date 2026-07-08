@@ -1,0 +1,57 @@
+---
+// ORBIT — Pluto's unusual, eccentric, inclined orbit.
+// Seeded issues:
+//   * inline <svg role="img"> with no accessible name  (svg-img-alt)
+//   * photo missing alt                                 (image-alt)
+//   * heading jumps h1 -> h3                             (heading-order)
+import Layout from '../layouts/Layout.astro';
+---
+<Layout title="Pluto's Unusual Orbit" description="Pluto's eccentric, tilted orbit and its resonance with Neptune.">
+  <h1>Pluto's Strange Orbit</h1>
+  <p>
+    Pluto's path around the Sun is unlike that of any of the eight planets. It is
+    highly elliptical and steeply tilted, and for 20 years out of every 248 it is
+    actually closer to the Sun than Neptune.
+  </p>
+
+  <!-- Inline SVG orbit diagram with role="img" but NO title/aria-label (svg-img-alt) -->
+  <svg role="img" viewBox="0 0 400 240" width="400" style="max-width:100%;background:#0b0c1a;border-radius:8px;">
+    <ellipse cx="200" cy="120" rx="150" ry="70" fill="none" stroke="#4a6cff" stroke-width="2" />
+    <ellipse cx="170" cy="120" rx="185" ry="55" fill="none" stroke="#c9a24a" stroke-width="2" transform="rotate(-12 200 120)" />
+    <circle cx="200" cy="120" r="10" fill="#ffcf48" />
+    <circle cx="350" cy="120" r="4" fill="#4a6cff" />
+    <circle cx="20" cy="95" r="3" fill="#c9a24a" />
+  </svg>
+
+  <!-- Skipped heading level: h1 above, h3 here (no h2) -->
+  <h3>An eccentric path</h3>
+  <p>
+    Pluto's orbit has an eccentricity of about 0.25, meaning it is noticeably
+    stretched. Its distance from the Sun ranges from roughly 4.4 billion km at
+    its closest (perihelion) to about 7.4 billion km at its farthest (aphelion).
+    Most recently, Pluto reached perihelion in 1989 and was closer to the Sun
+    than Neptune from 1979 to 1999.
+  </p>
+
+  <h2>A tilted orbit</h2>
+  <p>
+    Pluto's orbit is tilted about 17 degrees relative to the plane in which the
+    planets travel. This steep inclination, combined with the orbit's
+    eccentricity, keeps Pluto well clear of Neptune even when their orbital paths
+    appear to cross.
+  </p>
+
+  <h2>Locked in step with Neptune</h2>
+  <p>
+    Pluto and Neptune are caught in a 3:2 <em>orbital resonance</em>: Pluto
+    completes two orbits of the Sun for every three that Neptune makes. This
+    gravitational rhythm ensures the two worlds never come close to colliding,
+    despite their crossing orbits.
+  </p>
+
+  <!-- Photo missing alt (image-alt) -->
+  <figure>
+    <img src="/images/pluto-blue-haze.jpg" width="480" class="content-img" />
+    <figcaption>Sunlight scattering through Pluto's thin, layered atmospheric haze.</figcaption>
+  </figure>
+</Layout>

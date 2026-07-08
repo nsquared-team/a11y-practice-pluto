@@ -1,0 +1,63 @@
+---
+// DISCOVERY — the history of Pluto's discovery.
+// Seeded issues:
+//   * discovery-plates image missing alt        (image-alt)
+//   * link with an ARIA attr not allowed on it  (aria-allowed-attr)
+//   * empty "share" link with no text           (link-name)
+import Layout from '../layouts/Layout.astro';
+---
+<Layout title="Discovery of Pluto" description="How Clyde Tombaugh discovered Pluto in 1930.">
+  <h1>The Discovery of Pluto</h1>
+  <p>
+    In the late 1800s and early 1900s, astronomers noticed small irregularities
+    in the orbit of Neptune and suspected an undiscovered "Planet X" was tugging
+    on it. Percival Lowell, founder of the Lowell Observatory in Flagstaff,
+    Arizona, began a dedicated search for this hypothetical world in 1906.
+  </p>
+
+  <section aria-labelledby="discTitle">
+    <h2 id="discTitle">The search for Planet X</h2>
+    <p>
+      Lowell died in 1916 without finding Planet X. The search resumed in 1929
+      when the observatory hired a 23-year-old Kansas farm boy and amateur
+      astronomer named <strong>Clyde Tombaugh</strong>.
+    </p>
+    <figure>
+      <img src="/images/clyde-tombaugh.jpg" width="240" class="content-img"
+           alt="Clyde Tombaugh, the astronomer who discovered Pluto in 1930." />
+      <figcaption>Clyde W. Tombaugh, discoverer of Pluto.</figcaption>
+    </figure>
+  </section>
+
+  <h2>Blinking the night sky</h2>
+  <p>
+    Tombaugh photographed the same patches of sky several nights apart and used a
+    device called a <em>blink comparator</em> to rapidly switch between two plates.
+    A planet would appear to jump back and forth against the fixed background
+    stars. On 18 February 1930, while comparing plates taken in January, Tombaugh
+    spotted a faint moving dot. Pluto had been found.
+  </p>
+
+  <!-- Image deliberately missing alt: image-alt -->
+  <figure>
+    <img src="/images/pluto-discovery-plates.png" width="520" class="content-img" />
+    <figcaption>
+      The discovery plates. Arrows mark Pluto's position on 23 and 29 January 1930.
+    </figcaption>
+  </figure>
+
+  <p>
+    The name "Pluto" — the Roman god of the underworld — was suggested by
+    11-year-old Venetia Burney of England. The first two letters also honour
+    Percival Lowell's initials.
+    <!-- aria-pressed is not allowed on a link role (aria-allowed-attr) -->
+    <a href="https://en.wikipedia.org/wiki/Pluto" aria-pressed="false">Read
+    more about how Pluto got its name</a>.
+  </p>
+
+  <!-- Empty link with no discernible text (link-name) -->
+  <p>
+    Share this page:
+    <a href="#" class="icon-link" style="display:inline-block;width:1.5rem;height:1.5rem;background:#6b4fd6;border-radius:3px;"></a>
+  </p>
+</Layout>

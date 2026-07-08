@@ -1,0 +1,47 @@
+---
+// PLANET YEARS — Pluto's 76 years as the ninth planet.
+// Seeded issues:
+//   * <ul> contains <div> children, not <li>   (list)
+//   * timeline year labels fail contrast        (color-contrast)
+//   * heading jumps h1 -> h3                     (heading-order)
+import Layout from '../layouts/Layout.astro';
+---
+<Layout title="Pluto's Years as a Planet" description="The 76 years Pluto spent as the Solar System's ninth planet.">
+  <h1>Pluto's 76 Years as a Planet</h1>
+  <p>
+    From its discovery in 1930 until 2006, Pluto was taught to schoolchildren
+    everywhere as the ninth and most distant planet of the Solar System. Its
+    status, however, was questioned almost from the very beginning.
+  </p>
+
+  <!-- Skipped heading level: h1 above, h3 here (no h2) -->
+  <h3>A planet from the start</h3>
+  <p>
+    When Pluto was found, astronomers assumed it was roughly the size of Earth —
+    large enough to disturb Neptune's orbit. Over the following decades, better
+    measurements shrank Pluto dramatically, until it was known to be smaller than
+    our own Moon.
+  </p>
+
+  <!-- The "timeline" is a <ul> whose children are <div>, not <li> (list rule).
+       Year labels use .year-fail (color-contrast). -->
+  <ul class="timeline">
+    <div class="entry"><span class="year year-fail">1930</span> Clyde Tombaugh discovers Pluto; it is hailed as the ninth planet.</div>
+    <div class="entry"><span class="year year-fail">1978</span> Pluto's large moon Charon is discovered, allowing Pluto's mass to be measured — and it is tiny.</div>
+    <div class="entry"><span class="year year-fail">1992</span> The first other Kuiper Belt object is found, hinting that Pluto has many neighbours.</div>
+    <div class="entry"><span class="year year-fail">2005</span> Eris, a Kuiper Belt object more massive than Pluto, is discovered.</div>
+    <div class="entry"><span class="year year-fail">2006</span> The International Astronomical Union defines "planet" and reclassifies Pluto as a dwarf planet.</div>
+  </ul>
+
+  <h2>The trouble with being ninth</h2>
+  <p>
+    As telescopes improved, astronomers realised Pluto was just one of many icy
+    bodies in the Kuiper Belt. If Pluto counted as a planet, so might dozens of
+    similar objects. The discovery of Eris — at first thought to be larger than
+    Pluto — finally forced the question: what exactly <em>is</em> a planet?
+  </p>
+  <p>
+    That question was answered in 2006, and the answer left Pluto on the outside.
+    Read more about <a href="/demotion">Pluto's demotion</a>.
+  </p>
+</Layout>
