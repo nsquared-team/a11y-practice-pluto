@@ -24,6 +24,14 @@ import '../styles/global.css';
          violation. Headings still provide a bypass mechanism. -->
     <Nav />
 
+    <!-- TEMPORARY: deploy smoke-test banner. Not a seeded issue and not in
+         ISSUES.md — remove this block once PR #3's deploy is confirmed.
+         Deliberately a plain div (not <header>/<aside>) so it adds no landmark,
+         and #1a1a1a on #ffd400 clears WCAG AA so it seeds no contrast failure. -->
+    <div style="background:#ffd400;color:#1a1a1a;padding:0.75rem 1.5rem;text-align:center;font-weight:700;">
+      Deploy smoke test — if you can read this banner, PR #3 is being deployed.
+    </div>
+
     <!-- No main landmark: page content lives in plain divs (seeded issue) -->
     <div class="page-hero">
       <h1>Welcome to Discover Pluto</h1>
