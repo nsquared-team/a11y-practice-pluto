@@ -56,3 +56,14 @@ The essentials:
   `public/`). One logical concern per commit; messages like `blinkpages-ai: <what changed>`.
 - **Images:** edit / replace / crop / restyle existing imagery only — never fabricate a new photo. If a new
   image is genuinely needed, stop and ask for an upload.
+
+- **"Make this section private" is a platform setting, not a code change.** BlinkPages can gate a URL prefix
+  — everything under `/reference`, say, including its subpages — to a named view audience: exact email
+  addresses (`nathan.tyler@nsquared.io`), everyone at a domain (`nsquared.io`), or — only on sites that bring
+  their own Cloudflare Access — a Google Workspace group, matched on the **group's email address**
+  (`marketing-team@nsquared.io`), never Google's numeric group id. It lives in the tenant's central config
+  (`protectedPaths`), **not in this repo**, so it can't be shipped from here: **never** substitute a password
+  page, an unlisted URL, a `noindex` tag, or a JS "login" — none of those gate anything. Explain what's
+  possible and hand the request to the BlinkPages team. (Anyone who can edit the site can already view every
+  gated page, so the owner never locks themselves out.) If a prefix is already gated, keep it out of the
+  sitemap.

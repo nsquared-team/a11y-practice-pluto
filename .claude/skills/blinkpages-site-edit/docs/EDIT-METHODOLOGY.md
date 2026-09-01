@@ -215,3 +215,13 @@ can't infer from the page, or when the change would touch something outside `wri
 mode, make a **reasonable assumption** instead of asking, and only hard-stop on a true blocker (an ambiguous
 request you'd have to guess wildly at, or a needs-a-real-image case) — recording the blocker rather than
 guessing.
+
+**"Make this page/section private" is one of those blockers.** Gating a URL prefix is a **platform config**
+change — `protectedPaths` in the tenant's central config — which opens a prefix (and every subpath under it)
+to a named view audience: exact emails, a whole domain, or, only on tenants that bring their own Cloudflare
+Access, a Google Workspace group matched on the group's **email** (`marketing-team@nsquared.io`), never
+Google's numeric group id. It is not inside `writableRoots` and cannot be shipped from the repo, so **STOP**:
+never substitute a password page, an unlisted URL, a `noindex` tag, or a JS "login" — none of them gate
+anything, and shipping one *looks* like the request was fulfilled. Say what the platform can do and hand the
+request over (in `--auto`, record it as the blocker rather than improvising). The one repo-side chore that
+does belong to a gated prefix: keep it out of the sitemap.
