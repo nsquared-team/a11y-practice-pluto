@@ -11,10 +11,10 @@
 # BlinkPages platform guide — this is a BlinkPages tenant site
 
 This repo **is a live website**, hosted and edited on the **BlinkPages** platform. Its owner runs it by asking
-Claude — in the in-page **"Edit with AI"** editor or with the `/blinkpages-site-edit` skill. **Any** change,
+Claude — in the in-page **"Edit with AI"** editor or with the `/blinkpages-site-queue` skill. **Any** change,
 however you arrive at it (the editor, the skill, or a direct request here), follows the same conventions. The
 full editing craft lives in
-[`.claude/skills/blinkpages-site-edit/docs/EDIT-METHODOLOGY.md`](skills/blinkpages-site-edit/docs/EDIT-METHODOLOGY.md).
+[`.claude/skills/blinkpages-site-queue/docs/EDIT-METHODOLOGY.md`](skills/blinkpages-site-queue/docs/EDIT-METHODOLOGY.md).
 
 **Who you're helping.** The owner may not be technical — they think in terms of their *site* and their
 *business*, not code or git. Explain what you changed in plain language, keep their brand and voice consistent,
