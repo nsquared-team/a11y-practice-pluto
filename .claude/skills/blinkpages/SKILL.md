@@ -166,7 +166,7 @@ resolves on its own.
 1. **Authorize once (single click).** Run:
 
    ```bash
-   node .claude/skills/blinkpages/scripts/queue.mjs list
+   node .blinkpages/queue.mjs list
    ```
 
    The first time, it prints a one-click link — open it, confirm the shown code, click **Approve**. Nothing to
@@ -176,8 +176,8 @@ resolves on its own.
 2. **Pick a job, claim it, pull its images.** Take a `<id>` from the list:
 
    ```bash
-   node .claude/skills/blinkpages/scripts/queue.mjs claim --job <id> --by "$(git config user.email)"
-   node .claude/skills/blinkpages/scripts/queue.mjs pull-images --job <id> --dest .precision-images
+   node .blinkpages/queue.mjs claim --job <id> --by "$(git config user.email)"
+   node .blinkpages/queue.mjs pull-images --job <id> --dest .precision-images
    ```
 
    The claim returns the job's `prompt`, `pageKey`, `targetBranch`, and a `claimToken` (keep it for status
@@ -194,15 +194,15 @@ resolves on its own.
    the pulled images, and commit + push on **your** identity (one logical concern per commit):
 
    ```bash
-   node .claude/skills/blinkpages/scripts/queue.mjs set --job <id> --status running
+   node .blinkpages/queue.mjs set --job <id> --status running
    ```
 
 4. **Report status back.** After the push lands, write the outcome so the in-page card resolves:
 
    ```bash
-   node .claude/skills/blinkpages/scripts/queue.mjs set --job <id> --status done --commit <sha>
+   node .blinkpages/queue.mjs set --job <id> --status done --commit <sha>
    # or, if it didn't work out:
-   node .claude/skills/blinkpages/scripts/queue.mjs set --job <id> --status failed --error "what went wrong"
+   node .blinkpages/queue.mjs set --job <id> --status failed --error "what went wrong"
    ```
 
 If your site's worker doesn't have the queue endpoints yet, the script says so and exits cleanly — fall back
@@ -266,7 +266,7 @@ needs values no template can guess) — you create the file.
 4. **Get the source (imports only).** Pull the snapshot the console took when the job was created:
 
    ```bash
-   node .claude/skills/blinkpages/scripts/queue.mjs pull-source --job <id> --dest .precision-source
+   node .blinkpages/queue.mjs pull-source --job <id> --dest .precision-source
    ```
 
    It writes `.precision-source/<id>.html` (or `.txt`) and prints `importSource.warning`. `null` → the snapshot
@@ -303,7 +303,7 @@ needs values no template can guess) — you create the file.
    git add <entry.path> <public/… images you added>
    git commit -m 'blinkpages-ai: import "<title>"'     # or: blinkpages-ai: create "<title>"
    git push
-   node .claude/skills/blinkpages/scripts/queue.mjs set --job <id> --status done --commit "$(git rev-parse HEAD)"
+   node .blinkpages/queue.mjs set --job <id> --status done --commit "$(git rev-parse HEAD)"
    ```
 
    The draft's preview rebuilds and the owner lands on the new page. **Don't publish** — the branch is the
