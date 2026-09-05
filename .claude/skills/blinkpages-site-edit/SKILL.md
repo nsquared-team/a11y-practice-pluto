@@ -1,7 +1,7 @@
 ---
 name: blinkpages-site-edit
-description: Renamed — to work your queued changes use /blinkpages-process-queue; to change the site, just say what you want, no command needed. Kept temporarily so older instructions keep working. Triggers — "/blinkpages-site-edit".
-argument-hint: "[anything] — forwards to /blinkpages-process-queue"
+description: Renamed — the command for this site is now /blinkpages, and to change the site you need no command at all, just say what you want. Kept temporarily so older instructions keep working. Triggers — "/blinkpages-site-edit".
+argument-hint: "[anything] — forwards to /blinkpages"
 ---
 
 <!--
@@ -22,9 +22,9 @@ This command was split in two, because most of what it did never needed a comman
 
 **If they want the changes they queued** from the in-page "Edit with AI" card or the admin console — or gave no
 argument at all, which is what the old editor toast tells people to do — read
-[`../blinkpages-process-queue/SKILL.md`](../blinkpages-process-queue/SKILL.md) and follow it exactly. That is
-the queue drain, and it is now `/blinkpages-process-queue`.
+[`../blinkpages/SKILL.md`](../blinkpages/SKILL.md) and follow it exactly. That is the queue drain, and it is
+now simply `/blinkpages`, whose own no-argument default is to work the queue.
 
-Either way, mention the change once, in one short sentence — the command for queued work is now
-`/blinkpages-process-queue`, and a direct change needs no command — then get on with what they asked for. Do
-not stop, and do not ask them to re-run anything.
+Either way, mention the change once, in one short sentence — the command is now `/blinkpages`, and a direct
+change needs no command — then get on with what they asked for. Do not stop, and do not ask them to re-run
+anything.

@@ -10,8 +10,8 @@ at `.claude/blinkpages-editing.md` and their `CLAUDE.md` points at it. It is sha
 
 - the tenant site itself — stamped to `<repo>/.claude/blinkpages-editing.md`, ambient guidance for any
   change made in that repo, command or no command;
-- the **tenant** queue skill (`managed-skills/blinkpages-process-queue/`) — works that one site's
-  queued "Edit with AI" and content jobs, in place;
+- the **tenant** command (`managed-skills/blinkpages/`, `/blinkpages`) — works that one site's queued
+  "Edit with AI" and content jobs, in place;
 - the **operator** profile (`.claude/skills/blinkpages-site-edit/`) — drains the queue across all
   tenants, clones each repo, writes status back to KV.
 

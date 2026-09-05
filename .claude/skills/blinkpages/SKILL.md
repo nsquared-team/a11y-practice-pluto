@@ -1,7 +1,7 @@
 ---
-name: blinkpages-process-queue
-description: Process the BlinkPages change queue for THIS site — the "Edit with AI" requests and the admin console's "New <type> with AI" / import-from-a-link content jobs the owner queued from the in-page editor, worked in order and delivered as previewable drafts. Takes no description: to make a change directly, just say what you want — no command needed. Run it from inside your tenant repo (desktop or cloud Claude Code), at whatever model and reasoning effort you've selected. Triggers — "/blinkpages-process-queue", "process the queue", "work my queued edits", "apply the edits I queued", "anything waiting from the editor?", "drain the queue".
-argument-hint: "[--auto] — processes everything queued for this site"
+name: blinkpages
+description: The BlinkPages command for THIS site. With no argument it works the change queue — the "Edit with AI" requests and the admin console's "New <type> with AI" / import-from-a-link content jobs the owner queued from the in-page editor — taking each in turn and delivering it as a previewable draft. You do NOT need this to change the site: to make a change, just say what you want, no command. Run it from inside your tenant repo (desktop or cloud Claude Code), at whatever model and reasoning effort you've selected. Triggers — "/blinkpages", "process the queue", "work my queued edits", "apply the edits I queued", "anything waiting from the editor?", "drain the queue".
+argument-hint: "[--auto] — no argument works everything queued for this site"
 ---
 
 <!--
@@ -10,15 +10,20 @@ argument-hint: "[--auto] — processes everything queued for this site"
   It is owned by the BlinkPages platform and force-overwritten on every update; local changes here
   will be lost on the next sync. Want different or extra behavior? Create your OWN skill in a NEW
   directory under .claude/skills/<your-skill-name>/ — those are yours and are never touched.
-  Source of truth: nsquared-team/blinkpages-platform → managed-skills/blinkpages-process-queue/
+  Source of truth: nsquared-team/blinkpages-platform → managed-skills/blinkpages/
   ════════════════════════════════════════════════════════════════════════════════════════════════
 -->
 
-# /blinkpages-process-queue — work the change queue for THIS site
+# /blinkpages — the BlinkPages command for THIS site
 
-**This skill does one thing: it works the queue.** Those are the changes the owner asked for from the in-page
-**"Edit with AI"** card, and the **"New <type> with AI"** / import-from-a-link content jobs from the admin
-console. They are waiting in this site's own queue; nothing applies them until someone runs this.
+**With no argument, this works the queue** — that is the default and, today, the whole of it. The queue holds
+the changes the owner asked for from the in-page **"Edit with AI"** card, and the **"New <type> with AI"** /
+import-from-a-link content jobs from the admin console. They wait in this site's own queue; nothing applies
+them until someone runs this.
+
+The name is deliberately broad. If BlinkPages later grows other per-site operations worth a command, they
+become arguments here rather than a second skill and a third rename — but **the no-argument default stays the
+queue**, because that is what an owner who types `/blinkpages` after queueing an edit is asking for.
 
 **You do not need this skill to change the site.** If the owner just says *"add a Black Friday banner"*, do it
 — no command, no ceremony. The conventions are the same either way and they are already loaded: the repo's
@@ -38,8 +43,9 @@ a quick copy fix isn't.
 
 **Interactive is the default** — ask a follow-up whenever a queued request is genuinely ambiguous.
 
-- **No argument** → work the queue: list what's pending, then take each job in turn (**Drain your queued
-  requests**, at the bottom). If the queue is empty, say so — don't go looking for something to do.
+- **No argument** → the default: work the queue. List what's pending, then take each job in turn (**Drain
+  your queued requests**, at the bottom). If the queue is empty, say so — don't go looking for something to do,
+  and don't offer to invent work.
 - **`--auto`** → run non-interactively: make a reasonable assumption instead of asking, and hard-stop only on a
   true blocker (see [`.claude/blinkpages-editing.md`](../../blinkpages-editing.md)).
 
@@ -146,7 +152,7 @@ no queue to update in interactive mode.
 This skill is centrally managed and will be overwritten when the BlinkPages team ships an update — **don't
 edit it.** If you want different behavior, extra steps, or a site-specific workflow, create a **new** skill in
 its own directory under `.claude/skills/<your-skill-name>/`. Anything outside
-`.claude/skills/blinkpages-process-queue/` is yours and is never touched by the platform sync.
+`.claude/skills/blinkpages/` is yours and is never touched by the platform sync.
 
 ---
 
@@ -160,7 +166,7 @@ resolves on its own.
 1. **Authorize once (single click).** Run:
 
    ```bash
-   node .claude/skills/blinkpages-process-queue/scripts/queue.mjs list
+   node .claude/skills/blinkpages/scripts/queue.mjs list
    ```
 
    The first time, it prints a one-click link — open it, confirm the shown code, click **Approve**. Nothing to
@@ -170,8 +176,8 @@ resolves on its own.
 2. **Pick a job, claim it, pull its images.** Take a `<id>` from the list:
 
    ```bash
-   node .claude/skills/blinkpages-process-queue/scripts/queue.mjs claim --job <id> --by "$(git config user.email)"
-   node .claude/skills/blinkpages-process-queue/scripts/queue.mjs pull-images --job <id> --dest .precision-images
+   node .claude/skills/blinkpages/scripts/queue.mjs claim --job <id> --by "$(git config user.email)"
+   node .claude/skills/blinkpages/scripts/queue.mjs pull-images --job <id> --dest .precision-images
    ```
 
    The claim returns the job's `prompt`, `pageKey`, `targetBranch`, and a `claimToken` (keep it for status
@@ -188,15 +194,15 @@ resolves on its own.
    the pulled images, and commit + push on **your** identity (one logical concern per commit):
 
    ```bash
-   node .claude/skills/blinkpages-process-queue/scripts/queue.mjs set --job <id> --status running
+   node .claude/skills/blinkpages/scripts/queue.mjs set --job <id> --status running
    ```
 
 4. **Report status back.** After the push lands, write the outcome so the in-page card resolves:
 
    ```bash
-   node .claude/skills/blinkpages-process-queue/scripts/queue.mjs set --job <id> --status done --commit <sha>
+   node .claude/skills/blinkpages/scripts/queue.mjs set --job <id> --status done --commit <sha>
    # or, if it didn't work out:
-   node .claude/skills/blinkpages-process-queue/scripts/queue.mjs set --job <id> --status failed --error "what went wrong"
+   node .claude/skills/blinkpages/scripts/queue.mjs set --job <id> --status failed --error "what went wrong"
    ```
 
 If your site's worker doesn't have the queue endpoints yet, the script says so and exits cleanly — fall back
@@ -260,7 +266,7 @@ needs values no template can guess) — you create the file.
 4. **Get the source (imports only).** Pull the snapshot the console took when the job was created:
 
    ```bash
-   node .claude/skills/blinkpages-process-queue/scripts/queue.mjs pull-source --job <id> --dest .precision-source
+   node .claude/skills/blinkpages/scripts/queue.mjs pull-source --job <id> --dest .precision-source
    ```
 
    It writes `.precision-source/<id>.html` (or `.txt`) and prints `importSource.warning`. `null` → the snapshot
@@ -297,7 +303,7 @@ needs values no template can guess) — you create the file.
    git add <entry.path> <public/… images you added>
    git commit -m 'blinkpages-ai: import "<title>"'     # or: blinkpages-ai: create "<title>"
    git push
-   node .claude/skills/blinkpages-process-queue/scripts/queue.mjs set --job <id> --status done --commit "$(git rev-parse HEAD)"
+   node .claude/skills/blinkpages/scripts/queue.mjs set --job <id> --status done --commit "$(git rev-parse HEAD)"
    ```
 
    The draft's preview rebuilds and the owner lands on the new page. **Don't publish** — the branch is the
