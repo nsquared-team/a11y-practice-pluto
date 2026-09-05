@@ -8,7 +8,7 @@ verbatim, by both surfaces of the skill:
 
 - the **operator** profile (`.claude/skills/blinkpages-site-edit/`) — drains the queue across all
   tenants, clones each repo, writes status back to KV;
-- the **tenant** bundle (`managed-skills/blinkpages-site-edit/`, stamped into each tenant repo) —
+- the **tenant** bundle (`managed-skills/blinkpages-site-queue/`, stamped into each tenant repo) —
   edits the one site it's run inside, in place.
 
 Each surface owns its *wrapper* (how a job is discovered, claimed, and reported). Neither one re-states the
