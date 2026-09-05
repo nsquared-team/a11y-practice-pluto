@@ -101,19 +101,23 @@ https://<alias>--a11y-practice-pluto.blinkpages.dev
 ```
 
 `<alias>` is the branch name **lowercased**, with every run of characters that aren't a letter or digit
-collapsed to a single `-`, leading and trailing `-` removed, then cut to **63 characters**. The `/` is not
-kept — so `draft-holiday/v1` becomes `draft-holiday-v1`, giving
+collapsed to a single `-`, and leading and trailing `-` removed. The `/` is not kept — so
+`draft-holiday/v1` becomes `draft-holiday-v1`, giving
 `https://draft-holiday-v1--a11y-practice-pluto.blinkpages.dev`.
+
+**That arithmetic only holds while the slug is 37 characters or fewer.** Past that, BlinkPages replaces
+the tail with a short hash derived from the whole name — you cannot work that out by hand, so do not try
+and do not guess: say the address will be on the pull request, and leave it there. It is one more reason
+to keep `<slug>` short.
 
 Hand that over as where the preview **will** appear once the build finishes — never as somewhere you have
 checked. You cannot see from here whether the build succeeded, and if it failed there is no preview at all.
 
-**Two different branch names can collapse to the same address.** `draft-holiday/v1` and `draft-holiday-v1`
-both become `draft-holiday-v1`, as do any two names sharing the same first 63 characters. BlinkPages will
-not hand your build an address another open draft already owns, so yours gets no preview — and that address
-goes on serving **the other draft**. It does not fail visibly: the owner simply opens the link and sees the
-wrong page. Choose a short, distinctive `<slug>` for every new draft, and never reuse one that an open
-draft already has.
+**Two branch names that reduce to the same alias collide** — `draft-holiday/v1` and `draft-holiday-v1`
+both become `draft-holiday-v1`. BlinkPages will not hand your build an address another open draft already
+owns: the build **fails with an error naming the branch that holds it**, and there is no preview until one
+of them is renamed. Choose a short, distinctive `<slug>` for every new draft, and never reuse one that an
+open draft already has.
 
 Previews for this site are private: the first time the owner opens one they are asked to sign in with their site login. Say so when you hand over the address — otherwise the sign-in screen reads as a broken link.
 
