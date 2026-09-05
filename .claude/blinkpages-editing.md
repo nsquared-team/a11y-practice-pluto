@@ -3,17 +3,22 @@
 
 # AI edit — editing methodology
 
-This is the **single source of truth** for *how* to make a BlinkPages AI edit well. It is shared,
-verbatim, by both surfaces of the skill:
+This is the **single source of truth** for *how* to make a BlinkPages change well. It applies to
+**every** change to a tenant site, whether or not any skill was invoked — a site owner who simply says
+"add a Black Friday banner" gets exactly these conventions, because this file is stamped into their repo
+at `.claude/blinkpages-editing.md` and their `CLAUDE.md` points at it. It is shared verbatim by:
 
+- the tenant site itself — stamped to `<repo>/.claude/blinkpages-editing.md`, ambient guidance for any
+  change made in that repo, command or no command;
+- the **tenant** queue skill (`managed-skills/blinkpages-process-queue/`) — works that one site's
+  queued "Edit with AI" and content jobs, in place;
 - the **operator** profile (`.claude/skills/blinkpages-site-edit/`) — drains the queue across all
-  tenants, clones each repo, writes status back to KV;
-- the **tenant** bundle (`managed-skills/blinkpages-site-queue/`, stamped into each tenant repo) —
-  edits the one site it's run inside, in place.
+  tenants, clones each repo, writes status back to KV.
 
-Each surface owns its *wrapper* (how a job is discovered, claimed, and reported). Neither one re-states the
-craft below — they point here. When the way we edit changes, change it **here**, then re-run
-`scripts/sync-tenant-skills.mjs --regen` so both generated copies stay byte-identical.
+Each *wrapper* owns only how a job is discovered, claimed and reported. None of them re-states the craft
+below — they all point here. When the way we edit changes, change it **here**. The tenant copy is composed
+at stamp time, so it needs nothing; re-run `scripts/sync-tenant-skills.mjs --regen` to refresh the
+operator profile's copy.
 
 ---
 

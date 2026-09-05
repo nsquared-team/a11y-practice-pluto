@@ -1,7 +1,7 @@
 ---
 name: blinkpages-site-edit
-description: Renamed — this skill is now /blinkpages-site-queue. Kept temporarily so older instructions keep working. Triggers — "/blinkpages-site-edit".
-argument-hint: "[anything] — forwards to /blinkpages-site-queue"
+description: Renamed — to work your queued changes use /blinkpages-process-queue; to change the site, just say what you want, no command needed. Kept temporarily so older instructions keep working. Triggers — "/blinkpages-site-edit".
+argument-hint: "[anything] — forwards to /blinkpages-process-queue"
 ---
 
 <!--
@@ -12,16 +12,19 @@ argument-hint: "[anything] — forwards to /blinkpages-site-queue"
   ════════════════════════════════════════════════════════════════════════════════════════════════
 -->
 
-# /blinkpages-site-edit → renamed to /blinkpages-site-queue
+# /blinkpages-site-edit → renamed
 
-This skill was renamed. Everything it did now lives in **`/blinkpages-site-queue`**, in this same repo at
-`.claude/skills/blinkpages-site-queue/`.
+This command was split in two, because most of what it did never needed a command at all.
 
-**Do this now, without asking:** read
-[`../blinkpages-site-queue/SKILL.md`](../blinkpages-site-queue/SKILL.md) and follow it exactly, passing
-along whatever arguments were given here. Do not do the work from this file — it carries no instructions
-of its own, and acting on it alone would skip the whole methodology.
+**If the owner described a change** ("add a Black Friday banner"), just make it. Follow
+[`.claude/blinkpages.md`](../../blinkpages.md) and [`.claude/blinkpages-editing.md`](../../blinkpages-editing.md)
+— draft by default, end with the preview link. Do not send them to a slash command.
 
-Then, once, mention in passing that the command is now `/blinkpages-site-queue`, so the owner learns the
-new name. Say it in one short sentence and get on with the change they asked for — do not stop, and do
-not ask them to re-run it.
+**If they want the changes they queued** from the in-page "Edit with AI" card or the admin console — or gave no
+argument at all, which is what the old editor toast tells people to do — read
+[`../blinkpages-process-queue/SKILL.md`](../blinkpages-process-queue/SKILL.md) and follow it exactly. That is
+the queue drain, and it is now `/blinkpages-process-queue`.
+
+Either way, mention the change once, in one short sentence — the command for queued work is now
+`/blinkpages-process-queue`, and a direct change needs no command — then get on with what they asked for. Do
+not stop, and do not ask them to re-run anything.
