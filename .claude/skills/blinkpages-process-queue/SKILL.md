@@ -1,7 +1,7 @@
 ---
-name: blinkpages-site-queue
-description: Work the queue of AI changes for THIS BlinkPages site — the same edit engine the BlinkPages team runs, scoped to the one site you cloned. Drains what you queued from the editor ("Edit with AI" requests, and the admin console's "New <type> with AI" / import-from-a-link content jobs — a new post or page drafted from a brief or converted from a Google Doc, Claude artifact, or web page), and makes any change you describe directly: reads the page, does the multi-file / layout / image work, respects the site's writable roots, and delivers it as a previewable draft by default (straight to live only when you explicitly confirm), pushing on your own git identity. Run it from inside your tenant repo (desktop or cloud Claude Code). Runs at whatever model and reasoning effort you've selected. Default is interactive; `--auto` makes reasonable assumptions without pausing. Triggers — "ai edit", "site edit", "edit this site with AI", "/blinkpages-site-queue", "process the queue", "work my queued edits", "make this layout/image/multi-page change", "draft/import the new post". Formerly /blinkpages-site-edit.
-argument-hint: "[describe the change | --auto] — edits THIS site, in place"
+name: blinkpages-process-queue
+description: Process the BlinkPages change queue for THIS site — the "Edit with AI" requests and the admin console's "New <type> with AI" / import-from-a-link content jobs the owner queued from the in-page editor, worked in order and delivered as previewable drafts. Takes no description: to make a change directly, just say what you want — no command needed. Run it from inside your tenant repo (desktop or cloud Claude Code), at whatever model and reasoning effort you've selected. Triggers — "/blinkpages-process-queue", "process the queue", "work my queued edits", "apply the edits I queued", "anything waiting from the editor?", "drain the queue".
+argument-hint: "[--auto] — processes everything queued for this site"
 ---
 
 <!--
@@ -10,39 +10,44 @@ argument-hint: "[describe the change | --auto] — edits THIS site, in place"
   It is owned by the BlinkPages platform and force-overwritten on every update; local changes here
   will be lost on the next sync. Want different or extra behavior? Create your OWN skill in a NEW
   directory under .claude/skills/<your-skill-name>/ — those are yours and are never touched.
-  Source of truth: nsquared-team/blinkpages-platform → managed-skills/blinkpages-site-queue/
+  Source of truth: nsquared-team/blinkpages-platform → managed-skills/blinkpages-process-queue/
   ════════════════════════════════════════════════════════════════════════════════════════════════
 -->
 
-# /blinkpages-site-queue — work the AI change queue for THIS site
+# /blinkpages-process-queue — work the change queue for THIS site
 
-This is the **AI edit** engine BlinkPages runs — for layout, multi-page, image, or otherwise hard changes. The
-BlinkPages team runs it centrally across every site; **this copy is scoped to the one site you're inside.** It
-edits the working tree you have checked out, in place, and pushes with **your** git identity.
+**This skill does one thing: it works the queue.** Those are the changes the owner asked for from the in-page
+**"Edit with AI"** card, and the **"New <type> with AI"** / import-from-a-link content jobs from the admin
+console. They are waiting in this site's own queue; nothing applies them until someone runs this.
 
-**Model & effort are yours.** This runs at whatever model and reasoning effort you've selected in Claude Code —
-nothing here forces a specific one. Pick what fits the task: a big layout or multi-page change is worth a
-stronger model and higher effort; a quick copy fix doesn't need it.
+**You do not need this skill to change the site.** If the owner just says *"add a Black Friday banner"*, do it
+— no command, no ceremony. The conventions are the same either way and they are already loaded: the repo's
+`CLAUDE.md` imports [`.claude/blinkpages.md`](../../blinkpages.md), which carries draft-by-default, the preview
+link, `writableRoots` and the rest, and the full craft is in
+[`.claude/blinkpages-editing.md`](../../blinkpages-editing.md). This skill exists because a *queued* change
+needs claiming, fetching and a status written back — not because editing needs a command.
 
 It is **not** the editor, and it never reaches any other tenant, any shared queue, or any BlinkPages secret —
-it only touches this repo. It can either apply a change you describe here or pick up the edits you queued from
-the in-page **"Edit with AI"** card — see **How to invoke** just below.
+it only touches this repo, in place, pushing with **your** git identity.
+
+**Model & effort are yours.** This runs at whatever model and reasoning effort you've selected in Claude Code —
+nothing here forces a specific one. A big layout or multi-page job is worth a stronger model and higher effort;
+a quick copy fix isn't.
 
 ## How to invoke
 
-**Interactive is the default** — ask a follow-up question whenever the request is genuinely ambiguous. Route on
-the argument:
+**Interactive is the default** — ask a follow-up whenever a queued request is genuinely ambiguous.
 
-- **No argument** → look for queued "Edit with AI" requests (**Drain your queued requests**, at the bottom) and
-  work through any that are pending. If the queue is empty (or the worker has no queue endpoints yet), ask what
-  you'd like to change instead.
-- **`queue`** (or `drain` / `list`) → go straight to draining the queue.
-- **A change description** → make that change interactively (steps 1–4 below).
+- **No argument** → work the queue: list what's pending, then take each job in turn (**Drain your queued
+  requests**, at the bottom). If the queue is empty, say so — don't go looking for something to do.
 - **`--auto`** → run non-interactively: make a reasonable assumption instead of asking, and hard-stop only on a
-  true blocker (see [`docs/EDIT-METHODOLOGY.md`](docs/EDIT-METHODOLOGY.md)). Combines with any of the above.
+  true blocker (see [`.claude/blinkpages-editing.md`](../../blinkpages-editing.md)).
 
-The long `node …/queue.mjs list` command is just the mechanism — you don't have to remember it. Invoking the
-skill with no argument (or `queue`) runs the whole drain flow for you.
+If the owner describes a change while invoking this, that is not a queue job — just make the change directly,
+following the same conventions.
+
+The long `node …/queue.mjs list` command below is only the mechanism; invoking the skill runs the whole drain
+flow for you.
 
 ## 1. Confirm you're inside one tenant repo
 
@@ -70,7 +75,7 @@ assumption instead — see the methodology doc).
 
 ## 3. Make the edit
 
-Follow **[`docs/EDIT-METHODOLOGY.md`](docs/EDIT-METHODOLOGY.md)** — the shared editing craft: read the page
+Follow **[`.claude/blinkpages-editing.md`](../../blinkpages-editing.md)** — the shared editing craft: read the page
 first, make the multi-file / layout / image edits, place/crop/optimize any images, and **stay inside
 `writableRoots`**. Keep **one logical concern per commit**.
 
@@ -80,11 +85,11 @@ the live branch — never a GitHub draft-status PR (no `--draft`, ever; PRs stay
 sub-PR off another draft. If the owner references an existing draft or option, commit on that branch. Everything
 else is about the live site and becomes a **new draft** by default — even small text fixes. Commit straight to
 the live branch only when the owner has explicitly confirmed they want to skip the preview (recommend the draft
-first). Full rule, recipe, and how to build options: [`docs/EDIT-METHODOLOGY.md`](docs/EDIT-METHODOLOGY.md) →
+first). Full rule, recipe, and how to build options: [`.claude/blinkpages-editing.md`](../../blinkpages-editing.md) →
 **Draft by default**, **The draft loop**, and **Multiple options**.
 
 **Asked for multiple options ("a few variations", "three versions to choose from")?** Follow
-**[`docs/EDIT-METHODOLOGY.md`](docs/EDIT-METHODOLOGY.md) → "Multiple options: sibling drafts in a group"**: build
+**[`.claude/blinkpages-editing.md`](../../blinkpages-editing.md) → "Multiple options: sibling drafts in a group"**: build
 them as **flat siblings** in one `draft-<slug>/…` group — `draft-<slug>/v1`, `/v2`, … each a PR **`--base main`**
 (`git checkout -b draft-<slug>/vN draft-<slug>/v1`, push, `gh pr create --base main`), never a sub-PR off another
 draft. Each becomes its own preview in the editor's drafts list + compare view, clustered by folder; publishing
@@ -93,7 +98,7 @@ live branch.
 
 **Images:** edit / replace / crop / restyle only — there is no image generator. If the change truly needs a
 brand-new photo or raster, **stop** and add the image to the repo yourself (e.g. under `public/`), then
-re-run referencing it. Never fabricate an image as a substitute. (Full rule: `docs/EDIT-METHODOLOGY.md`.)
+re-run referencing it. Never fabricate an image as a substitute. (Full rule: `.claude/blinkpages-editing.md`.)
 
 ## 4. Deliver it: commit → push → PR → preview link
 
@@ -113,7 +118,7 @@ Stage only files inside `writableRoots`, one logical concern per commit. Then ro
   the draft.
 
 - **On the live branch (`main`)** → do **not** just push. Run **the draft loop** (full version with caveats:
-  [`docs/EDIT-METHODOLOGY.md`](docs/EDIT-METHODOLOGY.md) → **The draft loop**):
+  [`.claude/blinkpages-editing.md`](../../blinkpages-editing.md) → **The draft loop**):
 
   ```bash
   git fetch origin && git checkout -b draft-<slug>/v1 origin/main   # foldered from birth (keep <slug> short)
@@ -141,7 +146,7 @@ no queue to update in interactive mode.
 This skill is centrally managed and will be overwritten when the BlinkPages team ships an update — **don't
 edit it.** If you want different behavior, extra steps, or a site-specific workflow, create a **new** skill in
 its own directory under `.claude/skills/<your-skill-name>/`. Anything outside
-`.claude/skills/blinkpages-site-queue/` is yours and is never touched by the platform sync.
+`.claude/skills/blinkpages-process-queue/` is yours and is never touched by the platform sync.
 
 ---
 
@@ -155,7 +160,7 @@ resolves on its own.
 1. **Authorize once (single click).** Run:
 
    ```bash
-   node .claude/skills/blinkpages-site-queue/scripts/queue.mjs list
+   node .claude/skills/blinkpages-process-queue/scripts/queue.mjs list
    ```
 
    The first time, it prints a one-click link — open it, confirm the shown code, click **Approve**. Nothing to
@@ -165,8 +170,8 @@ resolves on its own.
 2. **Pick a job, claim it, pull its images.** Take a `<id>` from the list:
 
    ```bash
-   node .claude/skills/blinkpages-site-queue/scripts/queue.mjs claim --job <id> --by "$(git config user.email)"
-   node .claude/skills/blinkpages-site-queue/scripts/queue.mjs pull-images --job <id> --dest .precision-images
+   node .claude/skills/blinkpages-process-queue/scripts/queue.mjs claim --job <id> --by "$(git config user.email)"
+   node .claude/skills/blinkpages-process-queue/scripts/queue.mjs pull-images --job <id> --dest .precision-images
    ```
 
    The claim returns the job's `prompt`, `pageKey`, `targetBranch`, and a `claimToken` (keep it for status
@@ -179,19 +184,19 @@ resolves on its own.
    below instead of steps 3–4.
 
 3. **Mark it running, then make the edit.** Set status `running`, then do the change exactly as in steps 3–4
-   above — follow [`docs/EDIT-METHODOLOGY.md`](docs/EDIT-METHODOLOGY.md), stay inside `writableRoots`, place
+   above — follow [`.claude/blinkpages-editing.md`](../../blinkpages-editing.md), stay inside `writableRoots`, place
    the pulled images, and commit + push on **your** identity (one logical concern per commit):
 
    ```bash
-   node .claude/skills/blinkpages-site-queue/scripts/queue.mjs set --job <id> --status running
+   node .claude/skills/blinkpages-process-queue/scripts/queue.mjs set --job <id> --status running
    ```
 
 4. **Report status back.** After the push lands, write the outcome so the in-page card resolves:
 
    ```bash
-   node .claude/skills/blinkpages-site-queue/scripts/queue.mjs set --job <id> --status done --commit <sha>
+   node .claude/skills/blinkpages-process-queue/scripts/queue.mjs set --job <id> --status done --commit <sha>
    # or, if it didn't work out:
-   node .claude/skills/blinkpages-site-queue/scripts/queue.mjs set --job <id> --status failed --error "what went wrong"
+   node .claude/skills/blinkpages-process-queue/scripts/queue.mjs set --job <id> --status failed --error "what went wrong"
    ```
 
 If your site's worker doesn't have the queue endpoints yet, the script says so and exits cleanly — fall back
@@ -255,7 +260,7 @@ needs values no template can guess) — you create the file.
 4. **Get the source (imports only).** Pull the snapshot the console took when the job was created:
 
    ```bash
-   node .claude/skills/blinkpages-site-queue/scripts/queue.mjs pull-source --job <id> --dest .precision-source
+   node .claude/skills/blinkpages-process-queue/scripts/queue.mjs pull-source --job <id> --dest .precision-source
    ```
 
    It writes `.precision-source/<id>.html` (or `.txt`) and prints `importSource.warning`. `null` → the snapshot
@@ -273,7 +278,7 @@ needs values no template can guess) — you create the file.
    - `timeout` — the fetch didn't finish in 10 s; the snapshot may be empty or partial. Fetch it yourself.
 
    Then **convert** it to the collection's conventions per
-   [`docs/EDIT-METHODOLOGY.md`](docs/EDIT-METHODOLOGY.md) → **Importing a document into a content entry** —
+   [`.claude/blinkpages-editing.md`](../../blinkpages-editing.md) → **Importing a document into a content entry** —
    headings, links, lists, tables, footnotes — and **download every image into the site's media convention**
    (look at how siblings reference images, e.g. files under `public/assets/media/blog/<slug>/` referenced as
    `/assets/media/blog/<slug>/<name>.png`). **Never leave a `googleusercontent.com`, `docs.google.com`,
@@ -292,7 +297,7 @@ needs values no template can guess) — you create the file.
    git add <entry.path> <public/… images you added>
    git commit -m 'blinkpages-ai: import "<title>"'     # or: blinkpages-ai: create "<title>"
    git push
-   node .claude/skills/blinkpages-site-queue/scripts/queue.mjs set --job <id> --status done --commit "$(git rev-parse HEAD)"
+   node .claude/skills/blinkpages-process-queue/scripts/queue.mjs set --job <id> --status done --commit "$(git rev-parse HEAD)"
    ```
 
    The draft's preview rebuilds and the owner lands on the new page. **Don't publish** — the branch is the

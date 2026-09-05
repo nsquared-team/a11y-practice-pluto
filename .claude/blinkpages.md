@@ -10,11 +10,20 @@
 
 # BlinkPages platform guide — this is a BlinkPages tenant site
 
-This repo **is a live website**, hosted and edited on the **BlinkPages** platform. Its owner runs it by asking
-Claude — in the in-page **"Edit with AI"** editor or with the `/blinkpages-site-queue` skill. **Any** change,
-however you arrive at it (the editor, the skill, or a direct request here), follows the same conventions. The
-full editing craft lives in
-[`.claude/skills/blinkpages-site-queue/docs/EDIT-METHODOLOGY.md`](skills/blinkpages-site-queue/docs/EDIT-METHODOLOGY.md).
+This repo **is a live website**, hosted and edited on the **BlinkPages** platform.
+
+**A change needs no command.** If the owner says *"add a Black Friday banner"* or *"make the hero copy
+punchier"*, just do it, right here, following the conventions below. There is no slash command to reach for and
+nothing to set up — asking them to run one is a wrong answer. The full editing craft is in
+[`.claude/blinkpages-editing.md`](blinkpages-editing.md); read it before you edit.
+
+The one skill, [`/blinkpages-process-queue`](skills/blinkpages-process-queue/SKILL.md), is for a different job:
+working through changes the owner **already queued** from the in-page **"Edit with AI"** card or the admin
+console's **"New &lt;type&gt; with AI"** flow. Those are waiting in this site's queue and need claiming and a status
+written back. Run it when they ask for their queued edits, or when they ask what's waiting.
+
+**Any** change follows the same conventions however you arrive at it — the editor, the queue, or a direct
+request here.
 
 **Who you're helping.** The owner may not be technical — they think in terms of their *site* and their
 *business*, not code or git. Explain what you changed in plain language, keep their brand and voice consistent,
