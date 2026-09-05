@@ -192,6 +192,72 @@ into a single in-place edit.
 
 ---
 
+## Importing a document into a content entry — conversion rules
+
+A **content job** (queued by the admin console's *New <type>* flows) hands you a document — a Google Doc export,
+a public Claude artifact, a web page — to become **one entry in a content collection**, or a brief to draft one
+from. The wrapper pulls the snapshot and names the file and the collection; these are the rules for turning the
+document into that entry. The target is always *the collection's own conventions*: open two sibling entries
+first and match them (MD vs MDX, frontmatter keys, how images and callouts are written).
+
+**Frontmatter.** Keep what the console wrote in the stub (`title`, `date`, `draft`) unless the brief says
+otherwise. Fill `description` / `excerpt` from the document's lede — one or two sentences, plain text, no
+markdown. Categories, tags and other enums only from the values the schema or its siblings already use; never
+invent a taxonomy value. `slug` stays what the console chose — it's the address the owner was shown.
+
+**Body.**
+- **Headings** — the entry's title is the H1 (the layout renders it from frontmatter); the document's own title
+  goes nowhere. Start body headings at `##` and keep the document's hierarchy one level down from where it was
+  (`H1`→`##`, `H2`→`###`, …). Drop empty headings and "Untitled" placeholders.
+- **Paragraphs** — one blank line between them; unwrap hard line breaks inside a paragraph. Keep bold and
+  italic; drop font, colour and size styling entirely. Quotes and apostrophes as the siblings write them.
+- **Lists** — `-` bullets and `1.` numbers, nested by two spaces. A Google Doc "list" that is really a run of
+  paragraphs with typed numbers becomes a numbered list.
+- **Links** — `[text](https://…)` with the *real* destination: unwrap Google's redirector
+  (`https://www.google.com/url?q=<target>&…` → `<target>`, URL-decoded) and strip parameters you can see are
+  tracking (`utm_*`). A link to the site itself becomes a root-relative path (`/pricing/`). Bare URLs in the
+  text stay as autolinks.
+- **Images** — **download every one** into the site's media convention (whatever the siblings do — e.g. files
+  under `public/assets/media/blog/<slug>/`, referenced as `/assets/media/blog/<slug>/<descriptive-name>.png`).
+  Name files for their content, never `image1.png`. Write real alt text from the surrounding context. When the
+  stub left `featuredImage` (or the schema's equivalent) empty, the first image usually is it. **Never leave a
+  `googleusercontent.com`, `docs.google.com`, `lh3.google…`, `claude.ai` or other remote image URL in the
+  entry** — they expire or 403 for visitors. If an image can't be fetched, leave a `<!-- TODO: image … -->`
+  comment where it belongs and say so in your hand-off; don't fabricate a substitute.
+- **Tables** — a simple grid (no merged cells, short cells, up to ~6 columns) becomes a Markdown table with a
+  header row. Anything more — merged cells, multi-paragraph cells, nested lists — stays an HTML `<table>`,
+  which is legal in `.md` and `.mdx` alike, with the same cleanup (no inline styles, no widths, no `<font>`).
+- **Footnotes** — Markdown footnotes (`[^1]` in the text, `[^1]: note` at the end) when the site's renderer
+  supports them (a sibling uses them, or `remark-gfm`/`remark-footnotes` is configured); otherwise a "Notes"
+  section at the end with numbered items and superscript markers in the text.
+- **Code** — fenced blocks with a language; inline code in backticks. Google Docs "code" is usually a
+  monospace paragraph — recognise it by the font and convert it.
+- **Callouts / notes / quotes** — `>` blockquotes, or the site's own callout component when the siblings use
+  one (MDX). Don't introduce a component the collection doesn't already use.
+- **Embeds** (YouTube, tweets, forms) — keep the URL as a link, or use the site's existing embed component;
+  never paste raw `<iframe>` markup from the source.
+- **Cruft** — drop comments, suggestions, revision markers, page numbers, running headers/footers, "Table of
+  contents" blocks, trailing empty paragraphs, and the "Importing from …" / "AI is drafting this" notice the
+  console left in the stub. Keep every substantive sentence — conversion is not editing; rewrite only where the
+  brief asks you to.
+- **MDX** — escape `{`, `}` and a literal `<` in prose that isn't JSX; import any component you use at the top
+  of the file, exactly as a sibling does.
+
+**Claude artifacts** are often an *app*, not a document — buttons, tabs, state. Import the *content* (the text,
+the tables, the reference material), not the interactivity; if the artifact is a tool with no prose to speak of,
+stop and ask what the owner wants the page to say.
+
+**Drafting from a brief** (no document, or a brief on top of an import): write in the site's voice — read the
+`reference/` folder and the site's style library or brand page if it has one — at the length and structure of
+the best sibling entries. Facts you don't have are questions, not inventions: leave a `<!-- TODO: … -->` and say
+so in the hand-off.
+
+**Finish** with a build (`npm run build`, or `npx astro check`) — a schema error means the frontmatter is wrong,
+never that the schema should be loosened — and one commit: `blinkpages-ai: import "<title>"` or
+`blinkpages-ai: create "<title>"`.
+
+---
+
 ## Image scope (important)
 
 Claude **cannot synthesize a new photograph or raster image.** There is no image-generation provider

@@ -1,6 +1,6 @@
 ---
 name: blinkpages-site-edit
-description: Make a deep, high-quality AI edit to THIS BlinkPages site — the same edit engine the BlinkPages team runs, scoped to the one site you cloned. Reads the page, makes the multi-file / layout / image change you describe, respects the site's writable roots, and delivers it as a previewable draft by default (straight to live only when you explicitly confirm), pushing on your own git identity. Run it from inside your tenant repo (desktop or cloud Claude Code). Runs at whatever model and reasoning effort you've selected. Default is interactive; `--auto` makes reasonable assumptions without pausing. Triggers — "ai edit", "site edit", "edit this site with AI", "/blinkpages-site-edit", "make this layout/image/multi-page change".
+description: Make a deep, high-quality AI edit to THIS BlinkPages site — the same edit engine the BlinkPages team runs, scoped to the one site you cloned. Reads the page, makes the multi-file / layout / image change you describe, respects the site's writable roots, and delivers it as a previewable draft by default (straight to live only when you explicitly confirm), pushing on your own git identity. Also drains what you queued from the editor — "Edit with AI" requests and the admin console's "New <type> with AI" / import-from-a-link content jobs (a new post or page drafted from a brief or converted from a Google Doc, Claude artifact, or web page). Run it from inside your tenant repo (desktop or cloud Claude Code). Runs at whatever model and reasoning effort you've selected. Default is interactive; `--auto` makes reasonable assumptions without pausing. Triggers — "ai edit", "site edit", "edit this site with AI", "/blinkpages-site-edit", "make this layout/image/multi-page change", "draft/import the new post".
 argument-hint: "[describe the change | --auto] — edits THIS site, in place"
 ---
 
@@ -174,6 +174,10 @@ resolves on its own.
    choice, made on the editor's "Save as a new draft" checkbox — honor it even when it's the live branch; don't
    re-route a queued job into a new draft.
 
+   A row tagged **`✎ CONTENT`** is not a page edit — it's a **new post/page** queued from the admin console
+   (a brief to draft from, a link to import, or both). Claim it the same way, then follow **Content jobs**
+   below instead of steps 3–4.
+
 3. **Mark it running, then make the edit.** Set status `running`, then do the change exactly as in steps 3–4
    above — follow [`docs/EDIT-METHODOLOGY.md`](docs/EDIT-METHODOLOGY.md), stay inside `writableRoots`, place
    the pulled images, and commit + push on **your** identity (one logical concern per commit):
@@ -192,3 +196,112 @@ resolves on its own.
 
 If your site's worker doesn't have the queue endpoints yet, the script says so and exits cleanly — fall back
 to **interactive mode** (describe / paste the prompt, per the steps above) and edit in place.
+
+### Content jobs (`kind:"content"`)
+
+The admin console's **New <type>** flows queue a different kind of job: not a change to an existing page but a
+**new entry in one of the site's content collections** — "New Post with AI", or "New Post" with a link to
+import (a Google Doc, a public Claude artifact, a web page). The console has already done every deterministic
+step: the draft branch and its PR exist (`targetBranch`), the entry's address is decided, and — when the
+collection's schema allows it — a stub file with valid frontmatter is already on the branch. What's left for you
+is the *content*.
+
+**How they appear in `list`** — tagged `✎ CONTENT`, plus `import <host>` when a link was snapshotted and
+`⚠ <warning>` when that snapshot is suspect; the second line names the file and its address, the third is the
+first line of the prompt:
+
+```
+  • d_9f1…  pending/queued-for-precision ✎ CONTENT import docs.google.com  ·  4m old
+      posts → src/content/posts/q3-launch-recap.md  (/q3-launch-recap/)
+      Import the linked Google Doc into a new Post "Q3 launch recap".
+```
+
+`[no stub — create the file]` on the second line means the console could **not** write a stub (the schema
+needs values no template can guess) — you create the file.
+
+**The record** (from `claim`, or `list --json`) adds to the usual shape:
+
+```jsonc
+{ "kind": "content", "source": "content-console", "targetBranch": "draft-q3-launch-recap/v1",
+  "entry": { "type": "posts", "collection": "posts", "path": "src/content/posts/q3-launch-recap.md",
+             "url": "/q3-launch-recap/", "stub": true, "required": ["title", "date", "slug"],
+             "dir": "src/content/posts", "ext": ".md" },
+  "importSource": { "url": "https://docs.google.com/document/d/…/edit", "finalUrl": "…/export?format=html",
+                    "kind": "google-doc", "attachmentId": "a_…", "contentType": "text/html", "bytes": 48213,
+                    "title": "Q3 launch recap", "warning": null },   // absent for a brief-only job
+  "prompt": "…" }   // written by the console: the brief (if any), the import facts, the entry's path/URL/required keys
+```
+
+**Procedure** — replaces steps 3–4 above (claim, `running`, and the final status write are the same):
+
+1. **Check out the target branch.** `git fetch origin && git checkout <targetBranch>`. It's the console's fresh
+   draft (its PR is already open) — commit there; never re-route a content job to another branch. If the branch
+   is gone (the owner discarded the draft before you got here), set `failed` with
+   `--error "draft was discarded — nothing to write"` and stop.
+2. **Learn the collection.** Read `src/content.config.ts` (or `src/content/config.ts`) for the collection's
+   schema, then open one or two **sibling entries** in `entry.dir` — they show the frontmatter keys actually
+   used, the date format, how images are referenced, and the body conventions (MD vs MDX, components, callouts).
+3. **Make sure the file exists with valid frontmatter.**
+   - `entry.stub === true` → `entry.path` is already on the branch with valid frontmatter. Its body is a notice
+     block ("Importing from …" / "AI is drafting this") and, for an import, a plain-text first pass under a
+     `---` rule. **Replace the whole body.** Keep the frontmatter's `title`, `date` and `draft` exactly as the
+     console wrote them unless the brief says otherwise — the owner chose the title, and `draft: false` is
+     deliberate (the *branch* is the draft; publishing the branch is what makes it live).
+   - `entry.stub === false` → create `entry.path` yourself. Every key in `entry.required` must be present and
+     valid per the schema: copy a sibling's frontmatter shape and fill it honestly (a real category from the
+     enum, the `slug` from `entry.url`, today's date in the sibling's format, `draft: false` where the field
+     exists). Never invent a value you can't know (a required headshot, a `canonical` URL) — ask, or set `failed`
+     with `--error "<field> is required for a <Type> — tell me <what to provide>"`.
+4. **Get the source (imports only).** Pull the snapshot the console took when the job was created:
+
+   ```bash
+   node .claude/skills/blinkpages-site-edit/scripts/queue.mjs pull-source --job <id> --dest .precision-source
+   ```
+
+   It writes `.precision-source/<id>.html` (or `.txt`) and prints `importSource.warning`. `null` → the snapshot
+   *is* the document; convert it. Any other value means the snapshot is not trustworthy — fetch the link
+   yourself (`importSource.url`, or `finalUrl`):
+   - `not-public` — a Google Doc that isn't shared **"Anyone with the link"**; the snapshot is a sign-in page.
+     If you can't reach it either, set `failed` with
+     `--error "the Google Doc isn't shared publicly — set Share → Anyone with the link → Viewer, then re-create the post"`.
+     That text is what the requester reads on the in-page card.
+   - `shell-only` — a Claude artifact whose HTML is an app shell with no content in it. Open the URL in a
+     browser-capable tool (a headless browser or a fetch tool that renders JavaScript) and read the rendered page.
+   - `not-html` — the link returned something other than HTML (a PDF, a JSON API, …). Open it yourself and
+     convert whatever it actually is; if you can't read it, `failed` with an error naming the type.
+   - `too-large` — the snapshot was cut at 2 MB. Fetch the full document yourself.
+   - `timeout` — the fetch didn't finish in 10 s; the snapshot may be empty or partial. Fetch it yourself.
+
+   Then **convert** it to the collection's conventions per
+   [`docs/EDIT-METHODOLOGY.md`](docs/EDIT-METHODOLOGY.md) → **Importing a document into a content entry** —
+   headings, links, lists, tables, footnotes — and **download every image into the site's media convention**
+   (look at how siblings reference images, e.g. files under `public/assets/media/blog/<slug>/` referenced as
+   `/assets/media/blog/<slug>/<name>.png`). **Never leave a `googleusercontent.com`, `docs.google.com`,
+   `claude.ai` or other remote image URL in the entry** — those links expire or 403 for visitors.
+5. **Draft the body (when the prompt carries a brief).** Write it in the site's voice: read `reference/`
+   (voice-and-tone, about-the-company, customers-and-personas) and the site's own style library or brand page if
+   it has one (e.g. `src/pages/reference/style-library.astro`, `brand.astro`, a `DESIGN.md`), and match the
+   length, heading rhythm and tone of the best sibling entries. Brief **and** import → convert first, then apply
+   the brief to the converted text (restructure, tighten, add what's asked) rather than writing from scratch.
+6. **Validate.** `npm run build` (or `npx astro check`, when the site has it) must pass — a schema error here
+   means the frontmatter is wrong; fix the entry, never loosen the schema. Confirm the entry was emitted at
+   `entry.url` under `dist/`.
+7. **Commit and push, then report.** One commit, the entry plus the images you added:
+
+   ```bash
+   git add <entry.path> <public/… images you added>
+   git commit -m 'blinkpages-ai: import "<title>"'     # or: blinkpages-ai: create "<title>"
+   git push
+   node .claude/skills/blinkpages-site-edit/scripts/queue.mjs set --job <id> --status done --commit "$(git rev-parse HEAD)"
+   ```
+
+   The draft's preview rebuilds and the owner lands on the new page. **Don't publish** — the branch is the
+   draft; the owner reviews it and hits Publish.
+
+**When it doesn't work out**, `set --job <id> --status failed --error "<message>"`. The `error` is shown to the
+requester on the in-page card, so write it for *them* — what happened and what to do next:
+- source unreachable → `"the Google Doc isn't shared publicly — set Share → Anyone with the link → Viewer, then re-create the post"`,
+  or `"couldn't read <url> (<what happened>) — paste the text into the brief instead"`;
+- a required field only the owner can supply → `"<field> is required for a <Type> — tell me <what to provide>"`;
+- the draft is gone → `"draft was discarded — nothing to write"`;
+- the brief needs an image that doesn't exist → `"needs a real image — please upload one"` (never fabricate one).
