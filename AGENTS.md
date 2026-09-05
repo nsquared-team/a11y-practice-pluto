@@ -68,6 +68,12 @@ gh pr create --base main --head draft-<slug>/v1 --title "<short, human title>"
 Then wait for the pull request's checks to finish and read the preview address from its sticky
 **"🔍 Open Preview"** comment. If a check fails, fix it before handing anything to the owner.
 
+**If `gh` is missing or not signed in** — common in a local Codex/CLI setup that has `git` but no GitHub
+CLI — push the branch anyway, then stop and tell the owner to press **"Create PR"**, exactly as in Route
+B. Do **not** hand back a pushed branch as though it were a draft: without an open pull request it gets
+no preview and never appears in their drafts list. Working the queue is unaffected — those jobs already
+have their branch and pull request, so they only need `git push`.
+
 ### Route B — you have no network access
 
 This is the normal case in ChatGPT/Codex cloud, where the working phase runs offline. **Do not try to push
