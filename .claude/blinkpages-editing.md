@@ -12,8 +12,8 @@ at `.claude/blinkpages-editing.md` and their `CLAUDE.md` points at it. It is sha
   change made in that repo, command or no command;
 - the **tenant** command (`managed-skills/blinkpages/`, `/blinkpages`) — works that one site's queued
   "Edit with AI" and content jobs, in place;
-- the **operator** profile (`.claude/skills/blinkpages-site-edit/`) — drains the queue across all
-  tenants, clones each repo, writes status back to KV.
+- the **operator** profile — BlinkPages' own tooling (never present in a tenant repo) that drains the
+  queue across all tenants, clones each repo, writes status back to KV.
 
 Each *wrapper* owns only how a job is discovered, claimed and reported. None of them re-states the craft
 below — they all point here. When the way we edit changes, change it **here**. The tenant copy is composed
@@ -38,7 +38,8 @@ request came from — may be empty), and optional uploaded `images`.
 
 2. **Make the edit the prompt actually asks for.** Multi-file, layout, and component changes are in scope.
    Match the surrounding code: its naming, its component patterns, its design tokens. Don't invent a new
-   pattern when the site already has one.
+   pattern when the site already has one — see **Build with the site's design system** below before adding
+   any section, component or CSS.
 
 3. **Place and finish any uploaded images.** Uploaded replacements arrive on disk (the wrapper pulls them).
    Put them in the right place, wire them into the page, and crop / size / optimize as the layout needs.
@@ -48,6 +49,42 @@ request came from — may be empty), and optional uploaded `images`.
 
 5. **One logical concern per commit.** If the prompt bundles two unrelated changes, make two commits. Keep
    each commit message short and concrete: `blinkpages-ai: <what changed>`.
+
+---
+
+## Build with the site's design system, not beside it
+
+Every BlinkPages site carries a **style library** — the design system made explicit when the site was built.
+It is per-site (names and token prefixes differ from one site to the next), so find it rather than assume it:
+
+- `src/styles/tokens.css` — every colour, type size, spacing value and radius, as CSS custom properties;
+- `src/styles/global.css` — the reset, heading scale, `.btn` / `.container` / `.prose` primitives built on those tokens;
+- `src/components/` — shared components at the root (`Hero`, `CTABand`, `Testimonial`, `FAQ`, `PricingTier`,
+  `Header`, `Footer` are common names), page-specific ones under `src/components/<page>/`;
+- the **`/style-library` page** (usually `src/pages/style-library.astro`) — renders every token, type style,
+  layout primitive and component variant, so a person can review the system in one place.
+
+The point of the system is that it **compounds**: every page composed from existing pieces makes the next page
+cheaper and keeps the site looking like one site rather than a stack of one-offs. So when a request needs a
+new section, page, or visual treatment, work down this ladder and stop at the first rung that fits:
+
+1. **Look before you build.** Read `tokens.css`, open the style-library page, and grep `src/components/` for
+   something that already does the job. *Grep first, write second.*
+2. **Reuse a fitting component as-is.** Compose the page from what exists; new content, not new markup.
+3. **Need a variation? Extend, don't fork.** Add a typed variant prop with a sane default —
+   `background?: "navy" | "white"`, `align?: "left" | "center"` — so both uses share one component and every
+   page that already uses it is unchanged. Never restyle a shared component globally to suit one page, and
+   never paste a near-identical copy beside it. *Within reason*: if the variation would turn the component into
+   a maze of conditionals, that is a genuinely new component — make it, and say why in a one-line comment.
+4. **New component only when nothing fits.** Put it under `src/components/<page>/` to start; it graduates to
+   the `src/components/` root the moment a second page uses it. Build it from the tokens and primitives, not
+   from hardcoded values.
+5. **Values come from tokens.** No raw `#1e3a5f` or `font-size: 26px` in a page or component — use the
+   variable, and if the value genuinely doesn't exist yet, add it to `tokens.css` first. Every new variant or
+   primitive is shown on the style-library page (if the site has populated one), so the system stays honest.
+
+The test at the end: could the *next* section like this one be built from what now exists, with no new CSS?
+If yes, the design system grew. If you wrote a one-off, it didn't.
 
 ---
 
@@ -69,6 +106,25 @@ can be added later. When the owner says "draft" or "variation", they mean one of
 > **`gh pr create` must never pass `--draft`**, and any PR opened via the API sets `draft: false`. The editor
 > is defensive too — if it ever meets a GitHub-draft PR on publish, it marks it *ready for review* and then
 > merges, in one action — but the rule is that we never create one in the first place.
+
+### What the owner means
+
+Owners speak in *site* words. Each maps to exactly one mechanic — the editor's own label is in quotes so you can
+point at the button when that is the better answer:
+
+| The owner says… | It means — and what you do |
+|---|---|
+| "draft", "save this as a draft" | A `draft-<slug>/v1` branch + **open** PR off the live branch ("Drafts" → "+ Create Draft" in the editor). If your work already touched the live branch, move it onto a draft branch first (`git stash` → `git checkout -b draft-<slug>/v1 origin/main` → `git stash pop`) — never commit it to live. |
+| "preview", "show me", "let me see it" | The draft's preview link — the PR's sticky "🔍 Open Preview" comment (fallback: the alias URL below). For an *existing* draft, find its PR (`gh pr list --state open`, `draft-*` heads, match the title) and hand back that link. A "preview of the live site" is the live site itself. |
+| "publish", "take it live", "go live", "make it live" | Squash-merge the draft's PR into the live branch — exactly what "✅ Publish" does. Only when they explicitly ask; if several drafts are open, ask which; if it is one option in a group, close the sibling PRs afterwards (`gh pr close <n>`, never `--delete-branch`); confirm once the deploy has finished. |
+| "another version", "a variation", "an option", "two takes" | A sibling in the same group: `draft-<slug>/v2` + its own PR off the live branch ("+ Create Variation" / "Save as a new variation"). Start it from `v1` when it should build on that work, from live when it should not. Never stack one on another — see **Multiple options**. |
+| "compare them", "side by side" | The editor's "Compare" view — drafts and the live site as columns, PR titles as the labels. Point them there; nothing to build. |
+| "undo", "revert", "put it back" | "Undo the last change on this version" in the editor; from the CLI, `git revert HEAD` and push **on the same branch**. On the live branch this redeploys production immediately — confirm before doing it there. |
+| "delete / remove / throw away this draft" | "Remove this draft" = close the PR and **keep** the branch (`gh pr close <n>`, no `--delete-branch`), so it can be reopened later. |
+| "what drafts do I have?", "which ones are open?" | `gh pr list --state open` filtered to `draft-*` heads — or "open Drafts in your editor". Answer in draft **names** (the PR titles), never branch names. |
+| "mark this post as a draft", "unpublish this post" | Astro's `draft: true` frontmatter on a content entry (the site's own code hides it from the build) — **not** a BlinkPages draft. Ask which they mean if unclear; the change itself still ships as a BlinkPages draft. |
+| "make it private" | A platform setting (`protectedPaths`), not a code change — see the end of this file. Keep an already-gated prefix out of the sitemap. |
+| "is my edit done yet?" (something they queued) | Queued work waits for someone to run `/blinkpages` (Claude) or **Working the queue** (`AGENTS.md`); the in-page progress card and "Activity" resolve when the job reports back. |
 
 Route the request:
 
@@ -123,9 +179,12 @@ gh pr view draft-<slug>/v1 --json comments \
   Preview" headline link is the preview URL to hand the owner. That link is an HTML `<a href="…">` anchor, not a
   markdown link — extract the `href` (and find the comment by its `pr-preview-summary` marker, as above). If the
   comment is slow to appear, the URL is deterministic: `https://<alias>--<tenantId>.blinkpages.dev`, where
-  `<alias>` is the branch name with every non-alphanumeric run collapsed to a single `-` — so a foldered branch
-  `draft-holiday/v2` becomes the alias `draft-holiday-v2` (the `/` is NOT preserved in the host). `tenantId` is
-  in `.migrate-to-astro/tenant.*.json`.
+  `<alias>` is the branch name **lowercased**, with every non-alphanumeric run collapsed to a single `-` — so a
+  foldered branch `draft-holiday/v2` becomes the alias `draft-holiday-v2` (the `/` is NOT preserved in the host).
+  That arithmetic holds only while the slug is **37 characters or fewer**; past that BlinkPages keeps a prefix
+  and appends a short hash, so for a long name trust the PR comment, not your own derivation. `tenantId` is in
+  `.migrate-to-astro/tenant.*.json`. Previews ask for the site login the first time they are opened — say so
+  when you hand over the link, or the sign-in screen reads as a broken URL.
 - `gh pr checks --watch` may report "no checks reported" for a few seconds right after the PR opens — retry
   briefly. It exits non-zero when a check fails: read the failing run and fix it before handing the owner a URL.
 - **Tell the owner in their language** — draft / preview / publish / live, never branch / commit / merge / PR:
@@ -253,8 +312,8 @@ the tables, the reference material), not the interactivity; if the artifact is a
 stop and ask what the owner wants the page to say.
 
 **Drafting from a brief** (no document, or a brief on top of an import): write in the site's voice — read the
-`reference/` folder and the site's style library or brand page if it has one — at the length and structure of
-the best sibling entries. Facts you don't have are questions, not inventions: leave a `<!-- TODO: … -->` and say
+`reference/` folder and the site's style library or brand page if it has one (usually
+`src/pages/style-library.astro`) — at the length and structure of the best sibling entries. Facts you don't have are questions, not inventions: leave a `<!-- TODO: … -->` and say
 so in the hand-off.
 
 **Finish** with a build (`npm run build`, or `npx astro check`) — a schema error means the frontmatter is wrong,

@@ -51,11 +51,23 @@ The essentials:
   **Draft by default** + **The draft loop** sections.
 - **Always end with the preview link.** A draft isn't delivered until the owner has its preview URL — the link
   in the PR's sticky "🔍 Open Preview" comment, or `https://<alias>--<tenantId>.blinkpages.dev` where `<alias>`
-  is the branch with every non-alphanumeric run collapsed to `-` (so `draft-holiday/v2` → `draft-holiday-v2`;
-  `tenantId`: `.migrate-to-astro/tenant.*.json`).
+  is the branch lowercased with every non-alphanumeric run collapsed to `-` (so `draft-holiday/v2` →
+  `draft-holiday-v2`; slugs over 37 characters get a hash instead — trust the PR comment; `tenantId`:
+  `.migrate-to-astro/tenant.*.json`). Previews ask for the site login the first time — say so.
+- **Speak the owner's language, and map it exactly.** "Draft", "preview", "publish", "another version",
+  "compare", "undo", "remove this draft", "what drafts do I have?", "mark this post as a draft" each mean one
+  specific thing — the methodology's **What the owner means** table is the mapping. Never answer in
+  branch / commit / merge / PR words.
 - **Default to the page in question.** When a request comes from — or refers to — a specific page, edit that
   page (and the components/props/data it renders) only. Go site-wide or cross-page **only** when the request
   clearly asks for it ("on every page…", "across the site…", "the footer everywhere…").
+- **Build with the site's design system, not beside it.** The site has a style library — `src/styles/tokens.css`,
+  `src/components/` (shared at the root, page-specific under `src/components/<page>/`) and a `/style-library`
+  page (usually `src/pages/style-library.astro`). For any new section or page: look there first, reuse a
+  component that fits, **extend** one with a typed variant prop when it needs a variation (never a global
+  restyle or a near-copy — within reason), start a genuinely new component under `src/components/<page>/`, and
+  take every value from `tokens.css`. The system should compound: the next page composed from existing pieces,
+  not built from scratch. (Full ladder: the methodology's **Build with the site's design system** section.)
 - **Variations.** **"N variations" means N options total** — build them as **flat siblings** in one
   `draft-<slug>/…` group: `draft-<slug>/v1`, `/v2`, … each a PR **`--base main`** (never a sub-PR off another
   draft), so "three variations of the home page" → **three options** `…/v1 …/v2 …/v3`. The shared `/vN` folder is

@@ -143,9 +143,11 @@ Stage only files inside `writableRoots`, one logical concern per commit. Then ro
 
 For drafts, the loop isn't done until the owner has the **preview link** — the URL in the PR's sticky
 "🔍 Open Preview" comment (fallback: `https://<alias>--<tenantId>.blinkpages.dev`, where `<alias>` is the branch
-with every non-alphanumeric run collapsed to `-`, e.g. `draft-holiday/v2` → `draft-holiday-v2`). Hand it over in their
-language — draft / preview / publish, not branch / commit / PR. There's still no status to report anywhere and
-no queue to update in interactive mode.
+lowercased with every non-alphanumeric run collapsed to `-`, e.g. `draft-holiday/v2` → `draft-holiday-v2`; slugs
+over 37 characters get a hash instead, so trust the comment). Previews ask for the site login the first time —
+say so. Hand it over in their language — draft / preview / publish, not branch / commit / PR; the methodology's
+**What the owner means** table maps every such word (undo, remove, compare, "another version"…) to its mechanic.
+There's still no status to report anywhere and no queue to update in interactive mode.
 
 ## 5. Make it your own (but not this file)
 
@@ -291,7 +293,7 @@ needs values no template can guess) — you create the file.
    `claude.ai` or other remote image URL in the entry** — those links expire or 403 for visitors.
 5. **Draft the body (when the prompt carries a brief).** Write it in the site's voice: read `reference/`
    (voice-and-tone, about-the-company, customers-and-personas) and the site's own style library or brand page if
-   it has one (e.g. `src/pages/reference/style-library.astro`, `brand.astro`, a `DESIGN.md`), and match the
+   it has one (usually `src/pages/style-library.astro`; some sites keep a `brand.astro` or `DESIGN.md`), and match the
    length, heading rhythm and tone of the best sibling entries. Brief **and** import → convert first, then apply
    the brief to the converted text (restructure, tighten, add what's asked) rather than writing from scratch.
 6. **Validate.** `npm run build` (or `npx astro check`, when the site has it) must pass — a schema error here

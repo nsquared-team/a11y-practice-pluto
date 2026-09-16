@@ -1,3 +1,18 @@
+<!-- BEGIN blinkpages-managed (README) v1 -->
+**[www.discoverpluto.site](https://www.discoverpluto.site)** is a live website built with [Astro](https://astro.build) and hosted on
+[BlinkPages](https://blinkpages.com). This repository is its source code.
+
+- **Live site:** https://www.discoverpluto.site
+- **Edit the site:** https://www.discoverpluto.site/admin — owners sign in; no code needed.
+- **Changing files here?** Commits to `main` go live. Open a pull request to get a preview link
+  first. How drafts, previews and publishing work is in [`AGENTS.md`](AGENTS.md) and
+  [`CLAUDE.md`](CLAUDE.md) — the same guidance; read whichever your AI tool uses.
+
+<sub>This introduction is maintained by BlinkPages and refreshed automatically; everything below it is
+yours. To stop BlinkPages writing to this file, put `<!-- blinkpages-managed (README): off -->` below the
+closing marker.</sub>
+<!-- END blinkpages-managed (README) v1 -->
+
 # Discover Pluto — Accessibility Scanner Practice Site
 
 A small [Astro](https://astro.build) site (12 content pages, plus `/subscribe`

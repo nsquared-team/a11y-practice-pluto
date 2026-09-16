@@ -42,6 +42,16 @@ waiting?”** — that is a specific thing with its own steps: see **Working the
 - **Stay on the page you were asked about.** If the request is about one page, change that page and the
   components and data it uses. Go site-wide only when the request clearly says so ("on every page…", "the
   footer everywhere…").
+- **Build with the site's design system, not beside it.** The site has a style library: `src/styles/tokens.css`
+  (every colour, size, spacing value), `src/components/` (shared at the root, page-specific under
+  `src/components/<page>/`) and a `/style-library` page (usually `src/pages/style-library.astro`) showing every
+  piece. For any new section or page, in this order: look there first (*grep first, write second*); reuse a
+  component that fits; if it needs a variation, **extend** it with a typed variant prop that leaves its other
+  uses unchanged — never copy it or restyle it globally (within reason: a variation that would make it a maze
+  of conditionals is a new component); a new component starts under `src/components/<page>/` and moves to the
+  root once a second page uses it; values come from `tokens.css`, never hardcoded, and new variants go on the
+  style-library page. Every change should leave the design system more complete, so the next page is composed
+  from existing pieces rather than built from scratch.
 - **"Make this page private" is not something you can build.** Restricting who may *view* a page is a
   BlinkPages account setting, not a code change, and it cannot be shipped from this repository. Never
   substitute a password page, a hidden/unlisted URL, a `noindex` tag, or a JavaScript "login" — none of those
@@ -69,8 +79,8 @@ Then wait for the pull request's checks to finish and read the preview address f
 **"🔍 Open Preview"** comment. If a check fails, fix it before handing anything to the owner.
 
 **If `gh` is missing or not signed in** — common in a local Codex/CLI setup that has `git` but no GitHub
-CLI — push the branch anyway, then stop and tell the owner to press **"Create PR"**, exactly as in Route
-B. Do **not** hand back a pushed branch as though it were a draft: without an open pull request it gets
+CLI — push the branch anyway, then stop and tell the owner to press **"Create PR"** in their AI tool,
+exactly as in Route B. Do **not** hand back a pushed branch as though it were a draft: without an open pull request it gets
 no preview and never appears in their drafts list. Working the queue is unaffected — those jobs already
 have their branch and pull request, so they only need `git push`.
 
@@ -82,8 +92,9 @@ or create a pull request** — those commands will fail. Do this instead, start 
 1. Create the branch from where the repository already is — do **not** fetch first:
    `git checkout -b draft-<slug>/v1`
 2. Make the edits, then `git add -A` and `git commit -m "<what changed>"`. Stop there.
-3. Tell the owner, in plain words, what you changed and that **they need to press "Create PR"** to turn it
-   into a draft they can preview. Be explicit that you have *not* created it yet — you cannot.
+3. Tell the owner, in plain words, what you changed and that **they need to press "Create PR"** — the button
+   in *their AI tool* (ChatGPT/Codex shows it once you stop), not anything in BlinkPages — to turn it into a
+   draft they can preview. Be explicit that you have *not* created it yet — you cannot.
 4. Give them the address the preview *will* have once that pull request is open (see below), and say plainly
    that it only starts working after they press Create PR and the build finishes — usually a minute or two.
 
@@ -127,7 +138,7 @@ Finish every draft with a message in the owner's language containing (a) what yo
 address, and (c) how to publish. Adapt the wording; keep all three parts. For Route B, also say clearly that
 they must press Create PR first.
 
-> "I've drafted a new pricing page. Press **Create PR** to turn it into a draft, then preview it at
+> "I've drafted a new pricing page. Press **Create PR** here to turn it into a draft, then preview it at
 > `https://draft-pricing-v1--a11y-practice-pluto.blinkpages.dev` — it'll be ready about a minute after that.
 > If that address doesn't open, the pull request itself will have the exact link on it.
 > When you're happy with it, open your site editor and hit **Publish**."
@@ -141,7 +152,11 @@ The owner publishes. Their site editor is at **https://www.discoverpluto.site/_b
 compare drafts side by side, and has the **Publish** button. Publishing puts the draft live on
 https://www.discoverpluto.site and the site redeploys on its own.
 
-Publish on their behalf **only** when they explicitly ask you to, and only if you have network access.
+Publish on their behalf **only** when they explicitly ask you to, and only if you have network access:
+`gh pr merge draft-<slug>/v1 --squash` — the same squash-merge the Publish button does. If several drafts
+are open, ask which one. If the draft is one option in a group, close the other options' pull requests
+afterwards (`gh pr close <n>` — never `--delete-branch`, so a discarded option stays reopenable); the editor
+does that automatically, the command line does not. Confirm to the owner once the site has redeployed.
 
 ## Offering options
 
@@ -162,6 +177,24 @@ Never put competing options on the live branch.
 If the owner names a draft or an option that already exists, check out **that** branch and commit there — do
 not start a new one. Its preview refreshes when you push. Only start a new draft when the request is about
 the live site.
+
+## What the owner means
+
+Owners speak in *site* words. Each one maps to a single mechanic; the editor's own button is in quotes:
+
+| The owner says… | It means — and what you do |
+|---|---|
+| "draft", "save this as a draft" | A `draft-<slug>/v1` branch + **open** pull request against `main`. If you already changed files on the live branch, move the work onto a draft branch first (`git stash` → `git checkout -b draft-<slug>/v1` → `git stash pop`) — never commit it to live. |
+| "preview", "show me" | The draft's preview address (above). For an *existing* draft, find its pull request and hand back that link. A "preview of the live site" is the live site. |
+| "publish", "take it live", "go live" | Squash-merge the draft's pull request — what "✅ Publish" does. Only when explicitly asked; ask which draft if several are open; close sibling options afterwards (see **Publishing**). |
+| "another version / variation / option" | A sibling `draft-<slug>/v2` with its own pull request against `main` ("+ Create Variation"). Start it from `v1` if it should build on that work, from live if not. Never stack one on another. |
+| "compare them" | The "Compare" view in their editor — drafts and the live site side by side, pull-request titles as the labels. Point them there. |
+| "undo", "put it back" | "Undo the last change on this version" in the editor; from the command line, `git revert HEAD` and push **on the same branch**. On the live branch that redeploys the live site immediately — confirm first. |
+| "delete / remove this draft" | "Remove this draft" = close its pull request and **keep** the branch (`gh pr close <n>`, never `--delete-branch`) so it can be reopened. |
+| "what drafts do I have?" | Open pull requests whose branch starts with `draft-` (`gh pr list --state open`) — or "open Drafts in your editor". Answer in draft *names* (the titles), never branch names. |
+| "mark this post as a draft" | Astro's `draft: true` on a content entry (hides it from the site) — **not** a BlinkPages draft. Ask which they mean if unclear; the change itself still ships as a BlinkPages draft. |
+| "make it private" | A BlinkPages setting, not code — see the rules above. |
+
 ## Working the queue
 
 The owner can ask for a change from inside their own site — the in-page **"Edit with AI"** card, and the
@@ -203,8 +236,8 @@ node .blinkpages/queue.mjs set --job <id> --status running
 ```
 
 `claim` returns the request's `prompt`, the page it came from, and its **`targetBranch`**. Check that branch
-out and commit there — it is the owner's own choice, made on the editor's "save as a new draft" checkbox, so
-honour it even when it is the live branch. Do not re-route a queued job onto a branch of your own.
+out and commit there — it is the owner's own choice, made on the editor's "Save as a new draft" (or "Save as
+a new variation") checkbox, so honour it even when it is the live branch. Do not re-route a queued job onto a branch of your own.
 
 **3. Make the change** exactly as described earlier in this file, and push. Stage only the site files you
 actually changed - the pulled attachments land in a scratch folder (`.precision-images/`,
