@@ -106,6 +106,20 @@ live branch.
 brand-new photo or raster, **stop** and add the image to the repo yourself (e.g. under `public/`), then
 re-run referencing it. Never fabricate an image as a substitute. (Full rule: `.claude/blinkpages-editing.md`.)
 
+**Check what the site already has before you add anything.** `ls public/assets/media` is *not* the
+inventory — large files are stored in the site's media bucket, where they have **no local file** at all.
+Ask for the real list:
+
+```bash
+node .blinkpages/queue.mjs media --q <term>     # add --kind image|video|audio|doc, --all for everything
+```
+
+A **bucket-only** file has no path on disk, but its `/assets/media/...` URL works on the live site and on
+every preview: reference it by path in HTML/Markdown, and **never `import` one** via `astro:assets`, which
+needs a file to exist. Never delete a reference just because the file is missing locally — for these that is
+normal. Prefer reusing what is there over adding another copy. (If the command says this site's editor
+doesn't list media yet, fall back to `ls public/assets/media`, knowing it will miss the bucket.)
+
 ## 4. Deliver it: commit → push → PR → preview link
 
 Stage only files inside `writableRoots`, one logical concern per commit. Then route by where you are:
@@ -291,6 +305,8 @@ needs values no template can guess) — you create the file.
    (look at how siblings reference images, e.g. files under `public/assets/media/blog/<slug>/` referenced as
    `/assets/media/blog/<slug>/<name>.png`). **Never leave a `googleusercontent.com`, `docs.google.com`,
    `claude.ai` or other remote image URL in the entry** — those links expire or 403 for visitors.
+   Before you download anything, run `node .blinkpages/queue.mjs media --q <term>` (§3, **Images**) — the
+   site may already have the picture, including in the media bucket where `ls` cannot see it.
 5. **Draft the body (when the prompt carries a brief).** Write it in the site's voice: read `reference/`
    (voice-and-tone, about-the-company, customers-and-personas) and the site's own style library or brand page if
    it has one (usually `src/pages/style-library.astro`; some sites keep a `brand.astro` or `DESIGN.md`), and match the

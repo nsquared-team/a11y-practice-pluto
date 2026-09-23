@@ -10,6 +10,10 @@
 //   POST {origin}/_blink/api/ai/job/<id>/status { status, … }   → { jobId,status,stage,commitSha } | 409
 //   GET  {origin}/_blink/api/ai/job/<id>/attachment/<attId>     → raw attachment bytes (an uploaded image, or a
 //                                                                 content job's import snapshot — same route)
+//   GET  {origin}/_blink/api/media [?q=&kind=&source=&offset=&limit=]
+//                                                              → { counts, items:[{p,b,src,kind,ct,at,used}], … }
+//                                                                 the site's WHOLE media library: files that shipped in
+//                                                                 the build AND files that live only in the R2 bucket
 //   403 → token bad/expired (re-auth). 404 on /ai/queue → worker has no queue endpoints (fall back).
 //
 // CLI (origin via detectOrigin or --origin; token via getToken):
@@ -18,6 +22,7 @@
 //   node queue.mjs set --job <id> --status <s> [--stage s] [--commit sha] [--error msg] [--claim-token t]
 //   node queue.mjs pull-images --job <id> --dest <dir>
 //   node queue.mjs pull-source --job <id> [--dest <dir>]        # content job: download its import snapshot
+//   node queue.mjs media [--q <term>] [--kind image|video|audio|doc] [--source repo|bucket] [--all] [--json]
 
 import { mkdirSync, writeFileSync, realpathSync } from "node:fs";
 import { join } from "node:path";
@@ -28,15 +33,18 @@ const arg = (f) => { const i = process.argv.indexOf(f); return i > -1 ? process.
 const has = (f) => process.argv.includes(f);
 
 const PREFIX = "/_blink/api/ai";
+// The media inventory is not a queue thing, so it hangs off the plain API root.
+const API_ROOT = "/_blink/api";
 const queueUnavailable = (msg) => Object.assign(new Error(msg || "queue-unavailable"), { code: "QUEUE_UNAVAILABLE" });
+const mediaUnavailable = () => Object.assign(new Error("media-unavailable"), { code: "MEDIA_UNAVAILABLE" });
 const unauthorized = (msg) => Object.assign(new Error(msg || "token bad or expired — re-authorize"), { code: "UNAUTHORIZED" });
 
 // One transport helper for the whole worker API: set bearer + content-type, parse JSON, raise on non-2xx
 // with the server's error text. 403 → UNAUTHORIZED (re-auth); 404 on the queue → QUEUE_UNAVAILABLE.
-async function api(origin, token, method, path, body) {
+async function api(origin, token, method, path, body, root = PREFIX) {
   const init = { method, headers: { Authorization: `Bearer ${token}` } };
   if (body !== undefined) { init.headers["Content-Type"] = "application/json"; init.body = JSON.stringify(body); }
-  const r = await fetch(`${origin}${PREFIX}${path}`, init);
+  const r = await fetch(`${origin}${root}${path}`, init);
   if (r.status === 403) throw unauthorized();
   if (r.status === 404 && path === "/queue") throw queueUnavailable();
   const text = await r.text();
@@ -197,6 +205,79 @@ function printQueue(q) {
   if (other.length) { console.log("OTHER:"); other.forEach((j) => console.log(fmt(j))); }
 }
 
+// The site's media library, both stores. A tenant that offloaded to R2 has an EMPTY
+// public/assets/media beside a library of thousands, so `ls` is not the inventory — this is.
+// `all` walks the pages; the default 500 is one round trip for every site we have.
+export async function listMedia(origin, token, { q, kind, source, offset = 0, limit = 500, all = false } = {}) {
+  const qs = (off) => {
+    const u = new URLSearchParams();
+    if (q) u.set("q", q);
+    if (kind) u.set("kind", kind);
+    if (source) u.set("source", source);
+    u.set("offset", String(off));
+    u.set("limit", String(limit));
+    return u.toString();
+  };
+  const first = await api(origin, token, "GET", `/media?${qs(offset)}`, undefined, API_ROOT).catch((e) => {
+    // An editor that predates the route. managed-skills reach every tenant on push while the editor
+    // walks a soak-gated ladder for days, so this is the NORMAL state for a while, not a fault.
+    if (/HTTP 404/.test(String((e && e.message) || e))) throw mediaUnavailable();
+    throw e;
+  });
+  if (!all) return first;
+  const items = [...(first.items || [])];
+  let off = offset + (first.count || 0);
+  const matched = (first.counts && first.counts.matched) || items.length;
+  while (off < matched) {
+    const next = await api(origin, token, "GET", `/media?${qs(off)}`, undefined, API_ROOT);
+    if (!next.count) break;
+    items.push(...(next.items || []));
+    off += next.count;
+  }
+  return { ...first, items, count: items.length, offset };
+}
+
+const fmtBytes = (n) => {
+  const b = Number(n) || 0;
+  if (b < 1024) return `${b} B`;
+  const u = ["KB", "MB", "GB"];
+  let v = b / 1024, i = 0;
+  while (v >= 1024 && i < u.length - 1) { v /= 1024; i++; }
+  return `${v >= 100 ? Math.round(v) : v.toFixed(1)} ${u[i]}`;
+};
+
+// One line per file. `used` is a number for a file the build walked and null for a bucket file —
+// "in bucket" rather than "unused", because nothing counted references to it.
+export function fmtMedia(x) {
+  const where = x.src === "bucket" ? "bucket-only" : typeof x.used === "number" && x.used > 0 ? `used ×${x.used}` : "unused";
+  return `  ${x.p}  (${fmtBytes(x.b)} · ${x.kind || "file"} · ${where})`;
+}
+
+export function printMedia(res) {
+  const c = res.counts || {};
+  const items = res.items || [];
+  if (!items.length) {
+    console.log(c.total ? "No media matches that filter." : "This site has no media yet.");
+    return;
+  }
+  const repo = items.filter((x) => x.src !== "bucket");
+  const bucket = items.filter((x) => x.src === "bucket");
+  if (repo.length) {
+    console.log("IN THE REPO (public/assets/media — these have local files):");
+    repo.forEach((x) => console.log(fmtMedia(x)));
+    console.log("");
+  }
+  if (bucket.length) {
+    console.log("IN THE MEDIA BUCKET ONLY (no local file — reference by path, never import):");
+    bucket.forEach((x) => console.log(fmtMedia(x)));
+    console.log("");
+  }
+  console.log(`${c.total || 0} file(s) total — ${c.repo || 0} in the repo, ${c.bucket || 0} in the bucket only.` +
+    (items.length < (c.matched || 0) ? `  Showing ${items.length}; pass --all for the rest.` : ""));
+  if (res.bucket === "error") console.log("NOTE: the media bucket could not be read just now, so only the build's files are listed.");
+  if (res.truncated && res.truncated.bucket) console.log("NOTE: the bucket holds more files than this listing shows.");
+}
+
 async function main() {
   const cmd = process.argv[2];
   const origin = arg("--origin") || detectOrigin();
@@ -217,12 +298,18 @@ async function main() {
     console.log(JSON.stringify({ jobId: rec.jobId, status: rec.status, stage: rec.stage, commitSha: rec.commitSha || null }, null, 2));
   } else if (cmd === "pull-images") {
     console.log(JSON.stringify(await pullImages(origin, token, arg("--job"), arg("--dest") || ".", undefined), null, 2));
+  } else if (cmd === "media") {
+    const res = await listMedia(origin, token, {
+      q: arg("--q"), kind: arg("--kind"), source: arg("--source"), all: has("--all"),
+    });
+    if (has("--json")) console.log(JSON.stringify(res, null, 2));
+    else printMedia(res);
   } else if (cmd === "pull-source") {
     const res = await pullSource(origin, token, arg("--job"), arg("--dest") || ".", undefined);
     console.log(JSON.stringify(res, null, 2));
     if (res.warning) process.stderr.write(`⚠ importSource.warning = ${res.warning}: ${SOURCE_WARNING_HINT[res.warning] || "see SKILL.md → Content jobs"}\n`);
   } else {
-    process.stderr.write("usage: queue.mjs <list|claim|set|pull-images|pull-source> [--all] [--json] [--job <id>] [--by <email>] [--status <s>] [--stage <s>] [--commit <sha>] [--error <msg>] [--claim-token <t>] [--dest <dir>] [--origin <https://host>]\n");
+    process.stderr.write("usage: queue.mjs <list|claim|set|pull-images|pull-source|media> [--all] [--json] [--q <term>] [--kind <k>] [--source <repo|bucket>] [--job <id>] [--by <email>] [--status <s>] [--stage <s>] [--commit <sha>] [--error <msg>] [--claim-token <t>] [--dest <dir>] [--origin <https://host>]\n");
     process.exit(1);
   }
 }
@@ -232,6 +319,10 @@ async function main() {
 // committed, not symlinked, into tenant repos — kept for safety / parity with the operator scripts.)
 if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
   main().catch((e) => {
+    if (e && e.code === "MEDIA_UNAVAILABLE") {
+      process.stderr.write("This site's editor doesn't list media yet — use `ls public/assets/media` as the inventory for now (it will miss anything stored only in the media bucket).\n");
+      process.exit(0); // the editor ladder is days behind a managed-skills push; not an error
+    }
     if (e && e.code === "QUEUE_UNAVAILABLE") {
       process.stderr.write("This site's worker doesn't have the queue endpoints yet — falling back to interactive mode (paste the prompt).\n");
       process.exit(0); // graceful Phase-1 fallback, not an error

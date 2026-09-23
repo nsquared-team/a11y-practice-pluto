@@ -287,7 +287,9 @@ invent a taxonomy value. `slug` stays what the console chose — it's the addres
   stub left `featuredImage` (or the schema's equivalent) empty, the first image usually is it. **Never leave a
   `googleusercontent.com`, `docs.google.com`, `lh3.google…`, `claude.ai` or other remote image URL in the
   entry** — they expire or 403 for visitors. If an image can't be fetched, leave a `<!-- TODO: image … -->`
-  comment where it belongs and say so in your hand-off; don't fabricate a substitute.
+  comment where it belongs and say so in your hand-off; don't fabricate a substitute. **Check the site's own
+  library first** (`node .blinkpages/queue.mjs media --q <term>`) — it may already have the picture, and on a
+  site whose media is offloaded to the bucket `ls public/assets/media` will not show you a thing.
 - **Tables** — a simple grid (no merged cells, short cells, up to ~6 columns) becomes a Markdown table with a
   header row. Anything more — merged cells, multi-paragraph cells, nested lists — stays an HTML `<table>`,
   which is legal in `.md` and `.mdx` alike, with the same cleanup (no inline styles, no widths, no `<font>`).
@@ -335,6 +337,18 @@ A request to **generate a brand-new image** → **STOP**. Do not hand-draw an SV
 do not approximate. The wrapper decides what to do with the stop (the operator marks the job `failed` with
 `error: "needs a real image — please upload one"`; the tenant is told to upload one and re-run). Either way,
 **never** ship a fabricated image as a substitute.
+
+**Before you stop, ask whether the site already has it.** The media library is two stores: files in the repo
+under `public/assets/media`, and files that live **only** in the site's R2 media bucket, which have no local
+path at all — so a directory listing under-reports it, badly, on exactly the sites with the most media.
+
+```bash
+node .blinkpages/queue.mjs media --q <term> [--kind image] [--all]
+```
+
+A **bucket-only** file is referenced by its `/assets/media/...` path and works on the live site and every
+preview. Never `import` one via `astro:assets` (there is no file to import), and never remove a reference
+because the file is missing locally — that is the normal state for these. Reuse beats adding a duplicate.
 
 ---
 
