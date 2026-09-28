@@ -16,6 +16,17 @@
 //   node auth.mjs login            # force the device flow, print status
 //   node auth.mjs token            # print a valid token (cached or via the flow)
 //   node auth.mjs <…> --origin <o> # override detectOrigin (skip the tenant-marker lookup)
+//
+// Environment:
+//   BLINKPAGES_TOKEN       A pre-minted bearer for a non-interactive container — Codex cloud, CI —
+//                          honoured before the cache and the device flow (nobody is there to click
+//                          the approve link). Never written to the cache; `auth.mjs login` ignores it.
+//   BLINKPAGES_CONFIG_DIR  Where the token cache lives (default ~/.config/blinkpages). For sandboxes
+//                          whose home directory is read-only — point it somewhere writable.
+//
+// The cache is a convenience, never a requirement: if the cache directory cannot be written (a
+// sandboxed agent whose writes are confined to the workspace) the freshly approved token is still
+// returned and used — you are just asked to approve again next time.
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync, realpathSync, readdirSync } from "node:fs";
 import { join } from "node:path";
@@ -71,7 +82,8 @@ export function detectOrigin() {
 const hostFromOrigin = (origin) => { try { return new URL(origin).host; } catch { return String(origin).replace(/^https?:\/\//, ""); } };
 
 export function cachePath(origin) {
-  return join(homedir(), ".config", "blinkpages", `${hostFromOrigin(origin)}.json`);
+  const dir = (process.env.BLINKPAGES_CONFIG_DIR || "").trim() || join(homedir(), ".config", "blinkpages");
+  return join(dir, `${hostFromOrigin(origin)}.json`);
 }
 
 // Return the cached token only if it's good for at least another 2 minutes; else null.
@@ -84,11 +96,23 @@ export function cachedToken(origin) {
   return rec;
 }
 
-function writeCache(origin, rec) {
+// Cache the token record; returns the path written, or null when the cache directory is not writable.
+// NEVER throws: the token in `rec` was just approved by a human click, and losing it to an EACCES on
+// ~/.config (a sandboxed agent — Codex confines writes to the workspace by default) would send them
+// back to the approve link on every command. A failed cache costs one extra approval next time; a
+// thrown one costs the token.
+export function writeCache(origin, rec) {
   const p = cachePath(origin);
-  mkdirSync(join(p, ".."), { recursive: true });
-  writeFileSync(p, JSON.stringify(rec, null, 2), { mode: 0o600 });
-  return p;
+  try {
+    mkdirSync(join(p, ".."), { recursive: true });
+    writeFileSync(p, JSON.stringify(rec, null, 2), { mode: 0o600 });
+    return p;
+  } catch (e) {
+    const why = (e && (e.code || e.message)) || String(e);
+    process.stderr.write(`token not cached (${why}) — you'll be asked to approve again next time. ` +
+      `Set BLINKPAGES_CONFIG_DIR to a writable directory to keep it.\n`);
+    return null;
+  }
 }
 
 async function postJson(url, body) {
@@ -138,8 +162,14 @@ async function deviceFlow(origin) {
   throw new Error("authorization timed out before approval — re-run to try again");
 }
 
-// Get a valid bearer token for {origin}: cached if still good, else run the device flow and cache it.
+// Get a valid bearer token for {origin}: BLINKPAGES_TOKEN if set, else cached if still good, else run
+// the device flow and cache it. Always returns the bare token string (queue.mjs sends it as a Bearer).
 export async function getToken(origin, { interactive = true } = {}) {
+  // A pre-minted bearer for a non-interactive container (Codex cloud, CI): there is nobody to click
+  // the approve link, so the environment carries the grant. Honoured before the cache so a stale
+  // cached record can never shadow a deliberately supplied token.
+  const envToken = (process.env.BLINKPAGES_TOKEN || "").trim();
+  if (envToken) return envToken;
   const cached = cachedToken(origin);
   if (cached) return cached.token;
   if (!interactive) throw new Error("not authorized and interactive=false — run `auth.mjs login` first");
@@ -155,7 +185,8 @@ async function main() {
     const rec = await deviceFlow(origin);
     const p = writeCache(origin, rec);
     const exp = new Date(rec.expiresAt * 1000).toISOString();
-    process.stderr.write(`Authorized ${rec.email || "(this site)"} — token cached at ${p} (expires ${exp}).\n`);
+    const where = p ? `token cached at ${p}` : "token NOT cached";
+    process.stderr.write(`Authorized ${rec.email || "(this site)"} — ${where} (expires ${exp}).\n`);
   } else if (cmd === "token") {
     process.stdout.write(await getToken(origin, { interactive: true }) + "\n");
   } else {

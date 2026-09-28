@@ -10,7 +10,7 @@ at `.claude/blinkpages-editing.md` and their `CLAUDE.md` points at it. It is sha
 
 - the tenant site itself — stamped to `<repo>/.claude/blinkpages-editing.md`, ambient guidance for any
   change made in that repo, command or no command;
-- the **tenant** command (`managed-skills/blinkpages/`, `/blinkpages`) — works that one site's queued
+- the **tenant** command (`managed-skills/blinkpages/` — `/blinkpages` in Claude Code, `$blinkpages` in Codex) — works that one site's queued
   "Edit with AI" and content jobs, in place;
 - the **operator** profile — BlinkPages' own tooling (never present in a tenant repo) that drains the
   queue across all tenants, clones each repo, writes status back to KV.
@@ -24,7 +24,7 @@ operator profile's copy.
 
 ## Do the change
 
-Work interactively in the Claude Code session (unless an `--auto` mode says otherwise), at whatever model and
+Work interactively in your AI tool's session (unless an `--auto` mode says otherwise), at whatever model and
 reasoning effort is selected — pick what fits the task. The job carries a `prompt`, a `pageKey` (the page the
 request came from — may be empty), and optional uploaded `images`.
 
@@ -124,7 +124,7 @@ point at the button when that is the better answer:
 | "what drafts do I have?", "which ones are open?" | `gh pr list --state open` filtered to `draft-*` heads — or "open Drafts in your editor". Answer in draft **names** (the PR titles), never branch names. |
 | "mark this post as a draft", "unpublish this post" | Astro's `draft: true` frontmatter on a content entry (the site's own code hides it from the build) — **not** a BlinkPages draft. Ask which they mean if unclear; the change itself still ships as a BlinkPages draft. |
 | "make it private" | A platform setting (`protectedPaths`), not a code change — see the end of this file. Keep an already-gated prefix out of the sitemap. |
-| "is my edit done yet?" (something they queued) | Queued work waits for someone to run `/blinkpages` (Claude) or **Working the queue** (`AGENTS.md`); the in-page progress card and "Activity" resolve when the job reports back. |
+| "is my edit done yet?" (something they queued) | Queued work waits for someone to run the `blinkpages` skill (`/blinkpages` in Claude Code, `$blinkpages` in Codex) or follow **Working the queue** in `AGENTS.md`; the in-page progress card and "Activity" resolve when the job reports back. |
 
 Route the request:
 
@@ -326,8 +326,8 @@ never that the schema should be loosened — and one commit: `blinkpages-ai: imp
 
 ## Image scope (important)
 
-Claude **cannot synthesize a new photograph or raster image.** There is no image-generation provider
-wired up. This path is scoped to **edit / replace / crop / restyle**:
+You **cannot synthesize a new photograph or raster image.** There is no image-generation provider
+wired up for any tool. This path is scoped to **edit / replace / crop / restyle**:
 
 - **Swap** in an uploaded replacement image.
 - **Crop / border / padding / object-fit / layout** around an image — pure code/CSS edits.

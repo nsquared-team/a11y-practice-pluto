@@ -24,6 +24,10 @@ skeleton, skip it.
 **If the owner asks you to “process the queue”, “apply the edits I queued” or “is anything
 waiting?”** — that is a specific thing with its own steps: see **Working the queue** at the end of this file.
 
+**If the owner says `blinkpages`, `$blinkpages` or `/blinkpages`**, they mean the same thing. This repository
+ships it as a skill at `.agents/skills/blinkpages/SKILL.md`; if your tool has loaded that skill, run it — it is
+the full procedure, content jobs included. If not, **Working the queue** below is the same procedure in short form.
+
 ## The rules that matter most
 
 - **Draft by default.** Never commit a change straight to the live branch (`main`) unless the
@@ -197,6 +201,10 @@ Owners speak in *site* words. Each one maps to a single mechanic; the editor's o
 
 ## Working the queue
 
+The long form of this section — including the content-job procedure — is the `blinkpages` skill at
+`.agents/skills/blinkpages/SKILL.md` (`$blinkpages` in Codex). Use whichever your tool has loaded; they do the
+same thing.
+
 The owner can ask for a change from inside their own site — the in-page **"Edit with AI"** card, and the
 admin console's **"New <type> with AI"** and import-from-a-link buttons. Those requests go into this site's
 own queue and **sit there until an agent works them**. Nothing applies them automatically. When the owner
@@ -217,7 +225,8 @@ look" are different answers, and only one of them is true.
 
 ### If you can reach the network
 
-**1. Authorize once.** Run:
+**1. Authorize once.** Run (if your tool sandboxes commands, approve running this one outside the sandbox —
+it needs the network and writes its login under your home folder):
 
 ```bash
 node .blinkpages/queue.mjs list

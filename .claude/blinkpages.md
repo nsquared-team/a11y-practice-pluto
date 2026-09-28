@@ -17,7 +17,7 @@ punchier"*, just do it, right here, following the conventions below. There is no
 nothing to set up — asking them to run one is a wrong answer. The full editing craft is in
 [`.claude/blinkpages-editing.md`](blinkpages-editing.md); read it before you edit.
 
-The one command, [`/blinkpages`](skills/blinkpages/SKILL.md), is for a different job:
+The one command, [`/blinkpages`](skills/blinkpages/SKILL.md) (`$blinkpages` in Codex), is for a different job:
 working through changes the owner **already queued** from the in-page **"Edit with AI"** card or the admin
 console's **"New &lt;type&gt; with AI"** flow. Those are waiting in this site's queue and need claiming and a status
 written back. Run it — with no argument, which defaults to working the queue — when they ask for their
