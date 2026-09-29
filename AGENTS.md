@@ -225,16 +225,17 @@ look" are different answers, and only one of them is true.
 
 ### If you can reach the network
 
-**1. Authorize once.** Run (if your tool sandboxes commands, approve running this one outside the sandbox —
-it needs the network and writes its login under your home folder):
+**1. Authorize (it lasts a day).** Run (if your tool sandboxes commands, approve running this one outside the
+sandbox — it needs the network and writes its login under your home folder):
 
 ```bash
 node .blinkpages/queue.mjs list
 ```
 
-The first time, it prints a link. The **owner** opens it, checks the code shown matches, and clicks
-**Approve** — there is nothing to copy back. The token is cached, and the command then lists what's pending.
-If it reports that this site has no queue endpoints yet, stop and use the paste-the-request route above.
+It prints a link. The **owner** opens it, checks the code shown matches, and clicks **Approve** — there is
+nothing to copy back. The login is cached for **24 hours**, so this comes round about once a day: that is
+normal, not a fault. The command then lists what's pending. If it reports that this site has no queue
+endpoints yet, stop and use the paste-the-request route above.
 
 **2. Take one job.** Each row has an id:
 

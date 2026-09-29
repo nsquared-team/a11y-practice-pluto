@@ -18,8 +18,10 @@ argument-hint: "[--auto] — no argument works everything queued for this site"
 
 # blinkpages — the BlinkPages command for THIS site
 
-Type **`/blinkpages`** in Claude Code and in the ChatGPT desktop app, **`$blinkpages`** in the Codex CLI or IDE
-(or pick it from the `/skills` list). Same skill, same file.
+Type **`$blinkpages`** in Codex — the CLI, the IDE extension, or the ChatGPT desktop app — and
+**`/blinkpages`** in Claude Code. Or just say *"work my queue"*: either tool will pick this up from the
+description. Codex also lists skills under `/skills`, and some surfaces offer them in the `/` menu; if a
+slash spelling answers "Unrecognized command", use `$blinkpages`. Same skill, same file.
 
 **With no argument, this works the queue** — that is the default and, today, the whole of it. The queue holds
 the changes the owner asked for from the in-page **"Edit with AI"** card, and the **"New <type> with AI"** /
@@ -203,15 +205,16 @@ Codex does: network off, writes limited to the workspace. If a queue command fai
 `ECONNREFUSED` or `EACCES`, ask to run it outside the sandbox (or approve the escalation your tool offers) and
 retry. **A failure here is never "nothing queued"** — say the queue was unreachable, don't report it empty.
 
-1. **Authorize once (single click).** Run:
+1. **Authorize (single click, lasts a day).** Run:
 
    ```bash
    node .blinkpages/queue.mjs list
    ```
 
-   The first time, it prints a one-click link — open it, confirm the shown code, click **Approve**. Nothing to
-   copy or paste back. The token is cached locally (a session that starts from a fresh sandbox authorizes once
-   per session). The command then lists your pending edits.
+   It prints a one-click link — open it, confirm the shown code, click **Approve**. Nothing to copy or paste
+   back. The login is cached for **24 hours**, so this comes round about once a day — that is normal, not a
+   fault (and a session that starts from a fresh sandbox authorizes once per session). The command then lists
+   your pending edits.
 
 2. **Pick a job, claim it, pull its images.** Take a `<id>` from the list:
 
