@@ -20,11 +20,13 @@
 //   node queue.mjs list [--all] [--json]
 //   node queue.mjs claim --job <id> [--by <email>]
 //   node queue.mjs set --job <id> --status <s> [--stage s] [--commit sha] [--error msg] [--claim-token t]
+//                      [--report <file.json>] [--draft-before sha] [--live-before sha] [--merge-base sha] [--resolved-by clean|ai|fallback]
+//                      (the last five only for an update-from-the-live-site job — editor ADR-0125)
 //   node queue.mjs pull-images --job <id> --dest <dir>
 //   node queue.mjs pull-source --job <id> [--dest <dir>]        # content job: download its import snapshot
 //   node queue.mjs media [--q <term>] [--kind image|video|audio|doc] [--source repo|bucket] [--all] [--json]
 
-import { mkdirSync, writeFileSync, realpathSync } from "node:fs";
+import { readFileSync, mkdirSync, writeFileSync, realpathSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { getToken, detectOrigin } from "./auth.mjs";
@@ -62,12 +64,18 @@ export async function claimJob(origin, token, jobId, by) {
   return api(origin, token, "POST", `/job/${encodeURIComponent(jobId)}/claim`, by ? { by } : {});
 }
 
-export async function setStatus(origin, token, jobId, { status, stage, commitSha, error, claimToken } = {}) {
+export async function setStatus(origin, token, jobId, { status, stage, commitSha, error, claimToken, report, draftBeforeSha, liveBeforeSha, mergeBaseSha, resolvedBy } = {}) {
   const body = { status };
   if (stage !== undefined) body.stage = stage;
   if (commitSha !== undefined) body.commitSha = commitSha;
   if (error !== undefined) body.error = error;
   if (claimToken !== undefined) body.claimToken = claimToken;
+  // An update from the live site (kind "merge-conflict") reports what it kept, like the runner does.
+  if (report !== undefined) body.report = report;
+  if (draftBeforeSha !== undefined) body.draftBeforeSha = draftBeforeSha;
+  if (liveBeforeSha !== undefined) body.liveBeforeSha = liveBeforeSha;
+  if (mergeBaseSha !== undefined) body.mergeBaseSha = mergeBaseSha;
+  if (resolvedBy !== undefined) body.resolvedBy = resolvedBy;
   return api(origin, token, "POST", `/job/${encodeURIComponent(jobId)}/status`, body);
 }
 
@@ -188,7 +196,7 @@ export function fmt(rec) {
   const claim = rec.status === "claimed" && rec.claimedBy ? ` [claimed by ${rec.claimedBy}]` : "";
   const tenant = rec.tenantId ? `[${rec.tenantId}] ` : "";
   const head = `  • ${tenant}${rec.jobId}  ${rec.status}/${rec.stage}${kindTag}  ·  ${age} old${claim}${esc}`;
-  if (rec.kind === "merge-conflict") return `${head}\n      (merge-conflict — see SKILL.md)`;
+  if (rec.kind === "merge-conflict") return `${head}\n      (update this draft from the live site — the job's prompt is the whole procedure; report with --report)`;
   if (rec.kind === "content") return `${head}\n      ${contentDetail(rec)}${first ? `\n      ${first}` : ""}`;
   return `${head}\n      ${first}`;
 }
@@ -294,6 +302,8 @@ async function main() {
     const rec = await setStatus(origin, token, arg("--job"), {
       status: arg("--status"), stage: arg("--stage"), commitSha: arg("--commit"),
       error: arg("--error"), claimToken: arg("--claim-token"),
+      report: arg("--report") ? JSON.parse(readFileSync(arg("--report"), "utf8")) : undefined,
+      draftBeforeSha: arg("--draft-before"), liveBeforeSha: arg("--live-before"), mergeBaseSha: arg("--merge-base"), resolvedBy: arg("--resolved-by"),
     });
     console.log(JSON.stringify({ jobId: rec.jobId, status: rec.status, stage: rec.stage, commitSha: rec.commitSha || null }, null, 2));
   } else if (cmd === "pull-images") {

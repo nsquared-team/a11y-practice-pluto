@@ -251,6 +251,23 @@ retry. **A failure here is never "nothing queued"** — say the queue was unreac
 If your site's worker doesn't have the queue endpoints yet, the script says so and exits cleanly — fall back
 to **interactive mode** (describe / paste the prompt, per the steps above) and edit in place.
 
+### Update-from-the-live-site jobs (`kind:"merge-conflict"`)
+
+When the live site moved past a draft and it couldn't be brought up to date automatically, the editor queues the
+update here. **The job's `prompt` is the whole procedure** — the merge policy (keep the draft's design, take the
+live site's newer copy unless that copy is the draft's point, bring new live content in restyled), the intent
+brief and the report shape. Follow it: merge the live branch INTO the draft with a real merge commit
+(`git config merge.conflictStyle zdiff3` first; never rebase, never force-push, never `-X ours/theirs` over the
+whole merge), commit with the plain headline `Merge branch '<base>' into <draft>`, then report what you decided:
+
+```bash
+node .blinkpages/queue.mjs set --job <id> --status done --commit <sha> --claim-token <claimToken> \
+  --report report.json --draft-before <sha> --live-before <sha> --merge-base <sha> --resolved-by ai
+```
+
+The site owner then sees "Your draft is up to date with the live site" with each decision and a one-tap way to
+use the other version.
+
 ### Content jobs (`kind:"content"`)
 
 The admin console's **New <type>** flows queue a different kind of job: not a change to an existing page but a
