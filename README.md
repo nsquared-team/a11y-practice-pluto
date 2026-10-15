@@ -3,14 +3,21 @@
 [BlinkPages](https://blinkpages.com). This repository is its source code.
 
 - **Live site:** https://www.discoverpluto.site
-- **Edit the site:** https://www.discoverpluto.site/admin — owners sign in; no code needed.
-- **Changing files here?** Commits to `main` go live. Open a pull request to get a preview link
-  first. How drafts, previews and publishing work is in [`AGENTS.md`](AGENTS.md) and
-  [`CLAUDE.md`](CLAUDE.md) — the same guidance; read whichever your AI tool uses.
+- **Edit the site:** https://www.discoverpluto.site/admin — sign in and edit in your browser, no code needed.
 
-<sub>This introduction is maintained by BlinkPages and refreshed automatically; everything below it is
-yours. To stop BlinkPages writing to this file, put `<!-- blinkpages-managed (README): off -->` below the
-closing marker.</sub>
+## Change the site with AI
+
+Describe what you want in plain English and an AI coding tool makes the change for you. Pick the one you
+use:
+
+- **Claude Code:** [Get started with Claude Code →](https://blinkpages.com/onboarding/get-started/?repo=nsquared-team%2Fa11y-practice-pluto&host=www.discoverpluto.site)
+- **ChatGPT Codex:** [Get started with ChatGPT Codex →](https://blinkpages.com/onboarding/chatgpt/?repo=nsquared-team%2Fa11y-practice-pluto&host=www.discoverpluto.site)
+
+AI tools: the instructions for working on this site are in [`AGENTS.md`](AGENTS.md) and
+[`CLAUDE.md`](CLAUDE.md).
+
+<sub>BlinkPages keeps this introduction up to date; everything below it is yours. To stop BlinkPages
+writing to this file, put `<!-- blinkpages-managed (README): off -->` below the closing marker.</sub>
 <!-- END blinkpages-managed (README) v1 -->
 
 # Discover Pluto — Accessibility Scanner Practice Site
