@@ -1,0 +1,14 @@
+{
+  "$comment": "BlinkPages tenant marker — MINIMAL because this repo is public: only the fields .blinkpages/ reads (origin + deploy lookup). The full config lives in the private blinkpages-tenants registry.",
+  "tenantId": "a11y-practice-pluto",
+  "productionDomain": "www.discoverpluto.site",
+  "previewBase": "blinkpages.dev",
+  "github": {
+    "owner": "nsquared-team",
+    "repo": "a11y-practice-pluto",
+    "branch": "main"
+  },
+  "auth": {
+    "productionHost": "www.discoverpluto.site"
+  }
+}
