@@ -60,6 +60,18 @@ const queueUnavailable = (msg) => Object.assign(new Error(msg || "queue-unavaila
 // self-heals anyway: the editor bounces a legacy <tenant>.blinkpages.ai home to the canonical carrying
 // the query — but do not rely on that; resolve the right origin here.)
 export function detectOrigin() {
+  const { cfg, file } = readTenantMarker();
+  const host =
+    cfg.productionDomain ||
+    cfg.productionSubdomain ||
+    (cfg.auth && cfg.auth.productionHost) ||
+    (cfg.tenantId ? `${cfg.tenantId}.blinkpages.ai` : "");
+  if (!host) throw new Error(`tenant marker ${file} has no productionDomain/productionSubdomain/auth.productionHost or tenantId`);
+  return `https://${host}`;
+}
+
+// The single tenant marker in cwd, parsed: { cfg, file }. Shared by detectOrigin and wait-deploy.mjs.
+export function readTenantMarker() {
   const dir = join(process.cwd(), ".migrate-to-astro");
   let files = [];
   if (existsSync(dir)) files = readdirSync(dir).filter((f) => /^tenant\..+\.json$/.test(f));
@@ -69,14 +81,7 @@ export function detectOrigin() {
   if (files.length > 1) {
     throw new Error(`found ${files.length} tenant markers — cd into a single tenant repo and re-run (${files.join(", ")})`);
   }
-  const cfg = JSON.parse(readFileSync(join(dir, files[0]), "utf8"));
-  const host =
-    cfg.productionDomain ||
-    cfg.productionSubdomain ||
-    (cfg.auth && cfg.auth.productionHost) ||
-    (cfg.tenantId ? `${cfg.tenantId}.blinkpages.ai` : "");
-  if (!host) throw new Error(`tenant marker ${files[0]} has no productionDomain/productionSubdomain/auth.productionHost or tenantId`);
-  return `https://${host}`;
+  return { cfg: JSON.parse(readFileSync(join(dir, files[0]), "utf8")), file: files[0] };
 }
 
 const hostFromOrigin = (origin) => { try { return new URL(origin).host; } catch { return String(origin).replace(/^https?:\/\//, ""); } };

@@ -115,7 +115,7 @@ point at the button when that is the better answer:
 | The owner says… | It means — and what you do |
 |---|---|
 | "draft", "save this as a draft" | A `draft-<slug>/v1` branch + **open** PR off the live branch ("Drafts" → "+ Create Draft" in the editor). If your work already touched the live branch, move it onto a draft branch first (`git stash` → `git checkout -b draft-<slug>/v1 origin/main` → `git stash pop`) — never commit it to live. |
-| "preview", "show me", "let me see it" | The draft's preview link — the PR's sticky "🔍 Open Preview" comment (fallback: the alias URL below). For an *existing* draft, find its PR (`gh pr list --state open`, `draft-*` heads, match the title) and hand back that link. A "preview of the live site" is the live site itself. |
+| "preview", "show me", "let me see it" | The draft's preview link — the one `node .blinkpages/wait-deploy.mjs <branch>` prints once it is live (it reads the PR's sticky "🔍 Open Preview" comment). For an *existing* draft, find its branch (`gh pr list --state open`, `draft-*` heads, match the title) and run it on that. A "preview of the live site" is the live site itself. |
 | "publish", "take it live", "go live", "make it live" | Squash-merge the draft's PR into the live branch — exactly what "✅ Publish" does. Only when they explicitly ask; if several drafts are open, ask which; if it is one option in a group, close the sibling PRs afterwards (`gh pr close <n>`, never `--delete-branch`); confirm once the deploy has finished. |
 | "another version", "a variation", "an option", "two takes" | A sibling in the same group: `draft-<slug>/v2` + its own PR off the live branch ("+ Create Variation" / "Save as a new variation"). Start it from `v1` when it should build on that work, from live when it should not. Never stack one on another — see **Multiple options**. |
 | "compare them", "side by side" | The editor's "Compare" view — drafts and the live site as columns, PR titles as the labels. Point them there; nothing to build. |
@@ -130,7 +130,8 @@ Route the request:
 
 - **The owner references an existing draft or variation** ("the holiday draft", "that punchier-hero version") →
   find its open PR (`gh pr list --state open` — drafts are the `draft-*` head branches; match on the PR title,
-  which is the name the owner sees), check out that branch, and commit there. Its preview refreshes on push.
+  which is the name the owner sees), check out that branch, and commit there. Its preview refreshes on push —
+  run `node .blinkpages/wait-deploy.mjs` before you point the owner at it again.
 - **Anything else is about the live site** → base the work on `main`, but deliver it as a **new draft** (see
   **The draft loop** below). This is the default for *every* change, including small text fixes — "small" is not
   a reason to skip the preview. A draft is cheap and reversible, and it lets the owner see the change on their
@@ -167,26 +168,31 @@ gh pr create --base main --head draft-<slug>/v1 \
   --title "<short human title — this names the draft in the owner's editor>" \
   --body "<one-line plain-language summary>"        # a regular open PR — NEVER --draft
 
-# 4. Wait for the preview build (the PR's checks)
-gh pr checks draft-<slug>/v1 --watch
-
-# 5. Read the preview URL from the sticky "🔍 Open Preview" comment
-gh pr view draft-<slug>/v1 --json comments \
-  --jq '[.comments[].body | select(contains("pr-preview-summary"))] | last'
+# 4. Wait until the preview is LIVE, and get its link (it prints the address once the build is up)
+node .blinkpages/wait-deploy.mjs draft-<slug>/v1
 ```
 
-- The deploy workflow posts (and keeps updating) a sticky PR comment marked `pr-preview-summary`; its "🔍 Open
-  Preview" headline link is the preview URL to hand the owner. That link is an HTML `<a href="…">` anchor, not a
-  markdown link — extract the `href` (and find the comment by its `pr-preview-summary` marker, as above). If the
-  comment is slow to appear, the URL is deterministic: `https://<alias>--<tenantId>.blinkpages.dev`, where
-  `<alias>` is the branch name **lowercased**, with every non-alphanumeric run collapsed to a single `-` — so a
-  foldered branch `draft-holiday/v2` becomes the alias `draft-holiday-v2` (the `/` is NOT preserved in the host).
-  That arithmetic holds only while the slug is **37 characters or fewer**; past that BlinkPages keeps a prefix
-  and appends a short hash, so for a long name trust the PR comment, not your own derivation. `tenantId` is in
-  `.migrate-to-astro/tenant.*.json`. Previews ask for the site login the first time they are opened — say so
-  when you hand over the link, or the sign-in screen reads as a broken URL.
-- `gh pr checks --watch` may report "no checks reported" for a few seconds right after the PR opens — retry
-  briefly. It exits non-zero when a check fails: read the failing run and fix it before handing the owner a URL.
+- **Only hand over a link `wait-deploy.mjs` printed.** The address exists before the build does — opened in the
+  minute before the build lands, it shows a bare Cloudflare "There is nothing here yet" page, which reads to an
+  owner as a broken site. The script waits on the GitHub Deployment BlinkPages writes into this repo for your
+  pushed commit, then checks the address answers, then prints the link from the PR's sticky "🔍 Open Preview"
+  comment. Do **not** wait with `gh pr checks --watch`: this repo has no checks (the build runs centrally at
+  BlinkPages), so it returns "no checks reported" at once and proves nothing. Exit codes: **0** live — the
+  printed address is the link; **1** the build failed — there is no preview, so fix the draft and push again,
+  and send no link; **2** still building after 10 minutes — tell the owner the draft is saved and its preview is
+  on its way, and re-run before you send the link; **3** you can't check from here (no `gh`, not signed in, no
+  open PR) — use the no-`gh` route (push, then the owner presses Create PR).
+- Every push to an existing draft rebuilds its preview, so run it again after each push before pointing the owner
+  back at the link — until the new build lands they would see the previous version.
+- **Where the address comes from, for when you can't run the check** (Route B in `AGENTS.md`):
+  `https://<alias>--<tenantId>.blinkpages.dev`, where `<alias>` is the branch name **lowercased**, with every
+  non-alphanumeric run collapsed to a single `-` — so a foldered branch `draft-holiday/v2` becomes the alias
+  `draft-holiday-v2` (the `/` is NOT preserved in the host). That arithmetic holds only while the slug is **37
+  characters or fewer**; past that BlinkPages keeps a prefix and appends a short hash, so for a long name trust
+  the PR comment, not your own derivation. `tenantId` is in `.migrate-to-astro/tenant.*.json`. An address you
+  worked out is where the preview **will** be once the build finishes — never present it as somewhere you checked.
+- Previews ask for the site login the first time they are opened — say so when you hand over the link, or the
+  sign-in screen reads as a broken URL.
 - **Tell the owner in their language** — draft / preview / publish / live, never branch / commit / merge / PR:
   *"I've created a draft called '<title>'. Preview it here: <url> — you'll be asked to sign in with your site
   login. When you're happy, hit Publish in the editor, or tell me and I'll publish it."*
@@ -243,7 +249,8 @@ options** `…/v1 …/v2 …/v3` (compared alongside the live site). "A couple o
 3. **Keep the options meaningfully distinct.** Different directions, not cosmetic tweaks — options exist so the
    owner can pick a *direction*. Give each PR a short, descriptive title; it labels that option's column in compare.
 4. **Finish with every option's preview link.** Each PR gets its own sticky "🔍 Open Preview" comment (and its own
-   `draft-…` alias URL) — hand the owner the full set, the same way as in **The draft loop**. Tell them that
+   `draft-…` alias URL) — run `node .blinkpages/wait-deploy.mjs draft-<slug>/vN` for **each** option and hand the
+   owner the full set of links it printed, the same way as in **The draft loop**. Tell them that
    publishing any one option makes it live and discards the others.
 
 > **Stacked sub-PR (advanced, deliberate — NOT for options).** `gh pr create --base <draftBranch>` still works

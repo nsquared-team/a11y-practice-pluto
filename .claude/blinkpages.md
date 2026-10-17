@@ -49,11 +49,14 @@ The essentials:
   to the live branch only after the owner explicitly confirms (recommend the draft). The open PR is what creates
   the preview and the editor's drafts-list entry — a branch alone is invisible. Recipe: the methodology's
   **Draft by default** + **The draft loop** sections.
-- **Always end with the preview link.** A draft isn't delivered until the owner has its preview URL — the link
-  in the PR's sticky "🔍 Open Preview" comment, or `https://<alias>--<tenantId>.blinkpages.dev` where `<alias>`
-  is the branch lowercased with every non-alphanumeric run collapsed to `-` (so `draft-holiday/v2` →
+- **Always end with the preview link — once it's live.** A draft isn't delivered until the owner has its preview
+  URL, and you only send it after `node .blinkpages/wait-deploy.mjs <branch>` has printed it: that waits for the
+  build of your push and checks the address answers (a link opened before the build lands shows a bare
+  Cloudflare error page; `gh pr checks` can't tell you — this repo has no checks). When you can't run it (no
+  `gh`, no network), the address is only where the preview *will* be — `https://<alias>--<tenantId>.blinkpages.dev`,
+  `<alias>` = the branch lowercased with every non-alphanumeric run collapsed to `-` (so `draft-holiday/v2` →
   `draft-holiday-v2`; slugs over 37 characters get a hash instead — trust the PR comment; `tenantId`:
-  `.migrate-to-astro/tenant.*.json`). Previews ask for the site login the first time — say so.
+  `.migrate-to-astro/tenant.*.json`) — and you say so. Previews ask for the site login the first time — say so.
 - **Speak the owner's language, and map it exactly.** "Draft", "preview", "publish", "another version",
   "compare", "undo", "remove this draft", "what drafts do I have?", "mark this post as a draft" each mean one
   specific thing — the methodology's **What the owner means** table is the mapping. Never answer in

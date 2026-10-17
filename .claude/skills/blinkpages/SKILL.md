@@ -143,6 +143,7 @@ Stage only files inside `writableRoots`, one logical concern per commit. Then ro
   git add <changed paths within writableRoots>
   git commit -m "blinkpages-ai: <short summary of the change>"
   git push
+  node .blinkpages/wait-deploy.mjs     # waits for THIS push's build; prints the preview link once it's live
   ```
 
   If the branch somehow has **no open PR**, open one now (`gh pr create --base main` — every draft and option
@@ -159,9 +160,7 @@ Stage only files inside `writableRoots`, one logical concern per commit. Then ro
   gh pr create --base main --head draft-<slug>/v1 \
     --title "<short human title — names the draft in the owner's editor>" \
     --body "<one-line plain-language summary>"      # a regular open PR — NEVER --draft
-  gh pr checks draft-<slug>/v1 --watch
-  gh pr view draft-<slug>/v1 --json comments \
-    --jq '[.comments[].body | select(contains("pr-preview-summary"))] | last'
+  node .blinkpages/wait-deploy.mjs draft-<slug>/v1   # waits for the build; prints the live preview link
   ```
 
 - **The owner explicitly confirmed a live edit** → commit and push on `main`; that triggers the production
@@ -174,11 +173,17 @@ follow `AGENTS.md` → **Delivering a draft** → **Route B** (commit only, then
 never report the queue as empty when you could not look. Queued jobs are unaffected by the first case: their
 branch and PR already exist, so they need only `git push`.
 
-For drafts, the loop isn't done until the owner has the **preview link** — the URL in the PR's sticky
-"🔍 Open Preview" comment (fallback: `https://<alias>--<tenantId>.blinkpages.dev`, where `<alias>` is the branch
-lowercased with every non-alphanumeric run collapsed to `-`, e.g. `draft-holiday/v2` → `draft-holiday-v2`; slugs
-over 37 characters get a hash instead, so trust the comment). Previews ask for the site login the first time —
-say so. Hand it over in their language — draft / preview / publish, not branch / commit / PR; the methodology's
+For drafts, the loop isn't done until the owner has the **preview link** — the address
+`node .blinkpages/wait-deploy.mjs` prints once the build of your push is live (it is the link in the PR's sticky
+"🔍 Open Preview" comment). **Never send a preview link before it says so:** the address exists a minute before
+the build does, and opened early it shows a bare Cloudflare error page. `gh pr checks` can't tell you — this repo
+has no checks; the build runs at BlinkPages. If it exits **1**, the draft didn't build — fix it and push again,
+and send no link. **2**: still building — tell the owner the draft is saved and its preview is on its way, then
+re-run before sending the link. **3**: you can't check from here (no `gh`, no open PR) — the no-`gh` route above;
+there the address is only where the preview *will* be (`https://<alias>--<tenantId>.blinkpages.dev`, `<alias>` =
+the branch lowercased with every non-alphanumeric run collapsed to `-`, e.g. `draft-holiday/v2` →
+`draft-holiday-v2`; slugs over 37 characters get a hash, so leave those to the PR comment), never somewhere you
+checked. Previews ask for the site login the first time — say so. Hand it over in their language — draft / preview / publish, not branch / commit / PR; the methodology's
 **What the owner means** table maps every such word (undo, remove, compare, "another version"…) to its mechanic.
 There's still no status to report anywhere and no queue to update in interactive mode.
 

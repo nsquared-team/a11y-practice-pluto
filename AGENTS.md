@@ -77,10 +77,15 @@ git checkout -b draft-<slug>/v1 origin/main
 git add -A && git commit -m "<what changed>"
 git push -u origin draft-<slug>/v1
 gh pr create --base main --head draft-<slug>/v1 --title "<short, human title>"
+node .blinkpages/wait-deploy.mjs draft-<slug>/v1
 ```
 
-Then wait for the pull request's checks to finish and read the preview address from its sticky
-**"🔍 Open Preview"** comment. If a check fails, fix it before handing anything to the owner.
+The last command waits until the preview has actually been built and answers, then prints its address — the
+link from the pull request's sticky **"🔍 Open Preview"** comment. Hand over **that** address, and only once it
+has printed it: opened before the build lands, the address shows a bare Cloudflare error page. Don't wait with
+`gh pr checks` instead — this repository has no checks (the preview is built at BlinkPages), so it returns at
+once. If the script says the build failed, fix the draft before handing anything to the owner; if it is still
+building, tell the owner the draft is saved and run it again before sending the link.
 
 **If `gh` is missing or not signed in** — common in a local Codex/CLI setup that has `git` but no GitHub
 CLI — push the branch anyway, then stop and tell the owner to press **"Create PR"** in their AI tool,
@@ -107,7 +112,8 @@ Never claim you opened a pull request, and never present the preview address as 
 ## The preview address
 
 **The authoritative link is the one BlinkPages posts on the pull request**, in its sticky
-**"🔍 Open Preview"** comment. Use that whenever you can read the pull request.
+**"🔍 Open Preview"** comment — and `node .blinkpages/wait-deploy.mjs <branch>` prints exactly that link once the
+preview is live. Whenever you can run it, hand over only an address it printed.
 
 When you cannot — Route B — you can work the address out offline:
 
@@ -171,15 +177,16 @@ options in total**, built as *siblings*:
 - **each one its own pull request against `main`** — never one stacked on top of another
 - the shared `draft-<slug>/` prefix is what groups them together in the owner's editor and compare view
 - give each a short, human pull-request title — that title labels its column when they compare
-- hand back **every** option's preview address, and tell them that publishing one puts it live and discards
-  the others
+- hand back **every** option's preview address (run `node .blinkpages/wait-deploy.mjs` on each), and tell them
+  that publishing one puts it live and discards the others
 
 Never put competing options on the live branch.
 
 ## If you are asked to work on an existing draft
 
 If the owner names a draft or an option that already exists, check out **that** branch and commit there — do
-not start a new one. Its preview refreshes when you push. Only start a new draft when the request is about
+not start a new one. Its preview refreshes when you push — run `node .blinkpages/wait-deploy.mjs` before you
+send the link again, or the owner sees the previous version. Only start a new draft when the request is about
 the live site.
 
 ## What the owner means
@@ -189,7 +196,7 @@ Owners speak in *site* words. Each one maps to a single mechanic; the editor's o
 | The owner says… | It means — and what you do |
 |---|---|
 | "draft", "save this as a draft" | A `draft-<slug>/v1` branch + **open** pull request against `main`. If you already changed files on the live branch, move the work onto a draft branch first (`git stash` → `git checkout -b draft-<slug>/v1` → `git stash pop`) — never commit it to live. |
-| "preview", "show me" | The draft's preview address (above). For an *existing* draft, find its pull request and hand back that link. A "preview of the live site" is the live site. |
+| "preview", "show me" | The draft's preview address (above). For an *existing* draft, find its branch and run `node .blinkpages/wait-deploy.mjs` on it. A "preview of the live site" is the live site. |
 | "publish", "take it live", "go live" | Squash-merge the draft's pull request — what "✅ Publish" does. Only when explicitly asked; ask which draft if several are open; close sibling options afterwards (see **Publishing**). |
 | "another version / variation / option" | A sibling `draft-<slug>/v2` with its own pull request against `main` ("+ Create Variation"). Start it from `v1` if it should build on that work, from live if not. Never stack one on another. |
 | "compare them" | The "Compare" view in their editor — drafts and the live site side by side, pull-request titles as the labels. Point them there. |
