@@ -50,6 +50,18 @@ request came from — may be empty), and optional uploaded `images`.
 5. **One logical concern per commit.** If the prompt bundles two unrelated changes, make two commits. Keep
    each commit message short and concrete: `blinkpages-ai: <what changed>`.
 
+6. **Removing or replacing copy site-wide is not just a text search.** Two surfaces carry copy that grep
+   never finds:
+   - **The social card.** A phrase is often burned into the `og:image` / `twitter:image` artwork, and one
+     default image can be the link preview for most pages. After the text sweep, list every distinct
+     `og:image` and `twitter:image` value in the built `dist/` and open each one. Check for an
+     unreferenced twin (`.webp` next to a `.jpg`) that is still served. Keep the pixel size if the layout
+     hard-codes `og:image:width`/`height`.
+   - **Trailing-slash routes.** `_redirects` matches the literal path, so a rule for `/x` does not cover
+     `/x/`, and an old page under `public/` can still serve at 200 there. For every redirect rule, and
+     every `public/` folder with no matching `src/pages/` route, probe `/x`, `/x/` and `/x/index.html`
+     (e.g. under `wrangler dev --local`).
+
 ---
 
 ## Build with the site's design system, not beside it
