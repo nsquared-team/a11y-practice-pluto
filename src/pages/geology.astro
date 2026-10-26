@@ -1,10 +1,9 @@
 ---
 // GEOLOGY — Pluto's surface features.
 // Seeded issues:
+//   * Sputnik Planitia image missing alt    (image-alt)
 //   * heading jumps h2 -> h4                  (heading-order)
 //   * low-contrast aside                      (color-contrast)
-// Fixed:
-//   * Sputnik Planitia image alt text         (image-alt)
 import Layout from '../layouts/Layout.astro';
 ---
 <Layout title="Pluto's Geology" description="Nitrogen ice plains, water-ice mountains, and the surprising surface of Pluto.">
@@ -15,9 +14,9 @@ import Layout from '../layouts/Layout.astro';
     mountains, glacial plains, and possible ice volcanoes.
   </p>
 
+  <!-- Sputnik Planitia image deliberately missing alt (image-alt) -->
   <figure>
-    <img src="/images/pluto-sputnik-planitia.jpg" width="520" class="content-img"
-         alt="Enhanced-colour view of Pluto's full disc. The smooth, pale Sputnik Planitia ice plain fills the lower centre, its surface faintly divided into polygonal cells, with dark rust-red cratered terrain to its left and mottled blue-grey uplands to its right." />
+    <img src="/images/pluto-sputnik-planitia.jpg" width="520" class="content-img" />
     <figcaption>
       High-resolution view of Pluto, dominated by the bright Sputnik Planitia
       ice plain.
