@@ -26,12 +26,8 @@ import Layout from '../layouts/Layout.astro';
   <!-- GET so the static /subscribe confirmation page loads on submit -->
   <form action="/subscribe" method="get">
     <p>
-      <!-- Visible text cue, but NOT a programmatic <label> and NO placeholder,
-           so the field has no accessible name (label). NB: a placeholder-only
-           input would NOT trip axe, because axe treats the placeholder as the
-           accessible name. -->
-      Your name
-      <input type="text" name="name" />
+      <label for="name">Your name</label>
+      <input type="text" id="name" name="name" />
     </p>
 
     <p>
