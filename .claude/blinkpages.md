@@ -64,13 +64,22 @@ The essentials:
 - **Default to the page in question.** When a request comes from — or refers to — a specific page, edit that
   page (and the components/props/data it renders) only. Go site-wide or cross-page **only** when the request
   clearly asks for it ("on every page…", "across the site…", "the footer everywhere…").
-- **Build with the site's design system, not beside it.** The site has a style library — `src/styles/tokens.css`,
-  `src/components/` (shared at the root, page-specific under `src/components/<page>/`) and a `/style-library`
-  page (usually `src/pages/style-library.astro`). For any new section or page: look there first, reuse a
-  component that fits, **extend** one with a typed variant prop when it needs a variation (never a global
-  restyle or a near-copy — within reason), start a genuinely new component under `src/components/<page>/`, and
-  take every value from `tokens.css`. The system should compound: the next page composed from existing pieces,
-  not built from scratch. (Full ladder: the methodology's **Build with the site's design system** section.)
+- **Follow the site's design system: it is the default for every change.** It is written down twice:
+  - **`DESIGN.md`** at the repo root: the brand's rules (its colors and what each is for, the type hierarchy,
+    layout, shapes, components, and its Do's and Don'ts). Read it before any visual change and honor it.
+  - **The code it describes**: `src/styles/tokens.css` (every color, size and spacing value),
+    `src/components/` (the building blocks), and the internal **`/design-system/`** page
+    (`src/pages/design-system.astro`; `/style-library/` on older sites), which shows all of it.
+
+  For any new page, section or treatment: **reuse** a building block that fits. If one *almost* fits, offer to
+  **extend** it rather than copy it, in the owner's words, and ask first: *"Your testimonial block can't show a
+  photo yet. I can add that as an option, so this page and future ones can use it. Shall I?"* Build something
+  new only when nothing fits; never a near-copy or a one-off variant. Every value comes from `tokens.css`.
+  If the owner asks for something off-brand (a new color, another font), do it (it's their site), but say so
+  in one plain sentence and offer to make it part of their design system so future pages match. A value
+  changes in `tokens.css` **and** `DESIGN.md` together. Keep technical words (component, prop, variant, Astro,
+  token, CSS) out of what you tell the owner unless they ask. (Full approach: the methodology's **Build with
+  the site's design system** section.)
 - **Variations.** **"N variations" means N options total** — build them as **flat siblings** in one
   `draft-<slug>/…` group: `draft-<slug>/v1`, `/v2`, … each a PR **`--base main`** (never a sub-PR off another
   draft), so "three variations of the home page" → **three options** `…/v1 …/v2 …/v3`. The shared `/vN` folder is

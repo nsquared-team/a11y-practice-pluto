@@ -46,16 +46,22 @@ the full procedure, content jobs included. If not, **Working the queue** below i
 - **Stay on the page you were asked about.** If the request is about one page, change that page and the
   components and data it uses. Go site-wide only when the request clearly says so ("on every page…", "the
   footer everywhere…").
-- **Build with the site's design system, not beside it.** The site has a style library: `src/styles/tokens.css`
-  (every colour, size, spacing value), `src/components/` (shared at the root, page-specific under
-  `src/components/<page>/`) and a `/style-library` page (usually `src/pages/style-library.astro`) showing every
-  piece. For any new section or page, in this order: look there first (*grep first, write second*); reuse a
-  component that fits; if it needs a variation, **extend** it with a typed variant prop that leaves its other
-  uses unchanged — never copy it or restyle it globally (within reason: a variation that would make it a maze
-  of conditionals is a new component); a new component starts under `src/components/<page>/` and moves to the
-  root once a second page uses it; values come from `tokens.css`, never hardcoded, and new variants go on the
-  style-library page. Every change should leave the design system more complete, so the next page is composed
-  from existing pieces rather than built from scratch.
+- **Follow the site's design system: it is the default for every change.** `DESIGN.md` at the repo root holds
+  the brand's rules (its colors and what each is for, the type hierarchy, layout, shapes, components, and its
+  Do's and Don'ts): read it before any visual change and honor it. The code it describes is
+  `src/styles/tokens.css` (every value), `src/components/` (shared at the root, page-specific under
+  `src/components/<page>/`) and the internal `/design-system/` page (`src/pages/design-system.astro`;
+  `/style-library/` on older sites), which shows all of it. For any new section or page, in this order: look
+  there first (*grep first, write second*); reuse a building block that fits; if one almost fits, offer to
+  **extend** it (a typed variant prop that leaves its other uses unchanged) and ask the owner first, in their
+  words: *"Your testimonial block can't show a photo yet. I can add that as an option, so this page and future
+  ones can use it. Shall I?"*; never copy it, restyle it globally or make a one-off variant (within reason: a
+  maze of conditionals is a new component); a new component starts under `src/components/<page>/`; values
+  come from `tokens.css`, never hardcoded; a new or extended shared component gets a story on the
+  design-system page. If the owner asks for something off-brand, do it, but say so in one plain sentence and
+  offer to make it part of their design system. A value changes in `tokens.css` and `DESIGN.md` together.
+  Keep technical words (component, prop, variant, Astro, token, CSS) out of what you tell the owner unless
+  they ask.
 - **"Make this page private" is not something you can build.** Restricting who may *view* a page is a
   BlinkPages account setting, not a code change, and it cannot be shipped from this repository. Never
   substitute a password page, a hidden/unlisted URL, a `noindex` tag, or a JavaScript "login" — none of those

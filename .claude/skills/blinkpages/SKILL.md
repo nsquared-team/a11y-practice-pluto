@@ -357,8 +357,9 @@ needs values no template can guess) — you create the file.
    Before you download anything, run `node .blinkpages/queue.mjs media --q <term>` (§3, **Images**) — the
    site may already have the picture, including in the media bucket where `ls` cannot see it.
 5. **Draft the body (when the prompt carries a brief).** Write it in the site's voice: read `reference/`
-   (voice-and-tone, about-the-company, customers-and-personas) and the site's own style library or brand page if
-   it has one (usually `src/pages/style-library.astro`; some sites keep a `brand.astro` or `DESIGN.md`), and match the
+   (voice-and-tone, about-the-company, customers-and-personas), the site's design spec (`DESIGN.md` at the repo
+   root) and its design-system page (`src/pages/design-system.astro`; `style-library.astro` on older sites; some
+   keep a `brand.astro`), and match the
    length, heading rhythm and tone of the best sibling entries. Brief **and** import → convert first, then apply
    the brief to the converted text (restructure, tighten, add what's asked) rather than writing from scratch.
 6. **Validate.** `npm run build` (or `npx astro check`, when the site has it) must pass — a schema error here

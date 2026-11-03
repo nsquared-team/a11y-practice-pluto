@@ -66,34 +66,65 @@ request came from — may be empty), and optional uploaded `images`.
 
 ## Build with the site's design system, not beside it
 
-Every BlinkPages site carries a **style library** — the design system made explicit when the site was built.
-It is per-site (names and token prefixes differ from one site to the next), so find it rather than assume it:
+Every BlinkPages site has a **design system**: its brand and building blocks, made explicit when the site was
+built. It is per-site (names and token prefixes differ from one site to the next), so find it rather than
+assume it:
 
-- `src/styles/tokens.css` — every colour, type size, spacing value and radius, as CSS custom properties;
-- `src/styles/global.css` — the reset, heading scale, `.btn` / `.container` / `.prose` primitives built on those tokens;
-- `src/components/` — shared components at the root (`Hero`, `CTABand`, `Testimonial`, `FAQ`, `PricingTier`,
-  `Header`, `Footer` are common names), page-specific ones under `src/components/<page>/`;
-- the **`/style-library` page** (usually `src/pages/style-library.astro`) — renders every token, type style,
-  layout primitive and component variant, so a person can review the system in one place.
+- **`DESIGN.md`** at the repo root is the spec, in Google's design.md format: the colors and what each is for,
+  the type hierarchy, layout and spacing, depth and shape, the components, and the brand's **Do's and
+  Don'ts**. It is the design instruction for every change. Read it first and follow it by default.
+- `src/styles/tokens.css` holds every color, type size, spacing value and radius, as CSS custom properties.
+  DESIGN.md restates these values, so the two always change together.
+- `src/styles/global.css` holds the reset, the heading scale and the shared classes built on those tokens.
+- `src/components/` holds the shared building blocks at its root and page-specific ones under
+  `src/components/<page>/`.
+- The **design-system page**, `/design-system/` (`src/pages/design-system.astro`; on older sites
+  `/style-library/` and `src/pages/style-library.astro`), is internal, behind the editor login. It is the
+  brand book plus a component explorer showing every building block and its options (the stories are in
+  `src/components/design-system/stories.ts`). It is generated from DESIGN.md and the code, and shows a red
+  alert when DESIGN.md and `tokens.css` disagree.
+
+An older site may have only some of these; use what is there.
 
 The point of the system is that it **compounds**: every page composed from existing pieces makes the next page
 cheaper and keeps the site looking like one site rather than a stack of one-offs. So when a request needs a
 new section, page, or visual treatment, work down this ladder and stop at the first rung that fits:
 
-1. **Look before you build.** Read `tokens.css`, open the style-library page, and grep `src/components/` for
-   something that already does the job. *Grep first, write second.*
-2. **Reuse a fitting component as-is.** Compose the page from what exists; new content, not new markup.
-3. **Need a variation? Extend, don't fork.** Add a typed variant prop with a sane default —
-   `background?: "navy" | "white"`, `align?: "left" | "center"` — so both uses share one component and every
-   page that already uses it is unchanged. Never restyle a shared component globally to suit one page, and
-   never paste a near-identical copy beside it. *Within reason*: if the variation would turn the component into
-   a maze of conditionals, that is a genuinely new component — make it, and say why in a one-line comment.
-4. **New component only when nothing fits.** Put it under `src/components/<page>/` to start; it graduates to
-   the `src/components/` root the moment a second page uses it. Build it from the tokens and primitives, not
-   from hardcoded values.
-5. **Values come from tokens.** No raw `#1e3a5f` or `font-size: 26px` in a page or component — use the
-   variable, and if the value genuinely doesn't exist yet, add it to `tokens.css` first. Every new variant or
-   primitive is shown on the style-library page (if the site has populated one), so the system stays honest.
+1. **Look before you build.** Read DESIGN.md (its Do's and Don'ts above all) and `tokens.css`, open the
+   design-system page, and grep `src/components/` for something that already does the job. *Grep first,
+   write second.*
+2. **Reuse a fitting building block as-is.** Compose the page from what exists: new content, not new markup.
+3. **Almost fits? Extend it, don't fork it, and ask the owner first.** An extension is a new option on a
+   shared component (in code, a typed variant prop with a default, such as `background?: "navy" | "white"` or
+   `align?: "left" | "center"`), so every page that already uses it stays exactly as it is. Tell the owner in
+   one or two plain sentences what you would add and why it helps, and let them decide: *"Your services
+   cards only come in white. I can add a navy version, so this page can use them and the other pages stay as
+   they are. Shall I?"* Never restyle a shared component globally to suit one page, never paste a
+   near-identical copy beside it, and never make a one-off variant of an existing pattern. *Within reason*: if
+   the option would turn the component into a maze of conditionals, that is a genuinely new component. Make
+   it, and say why in a one-line comment. When you cannot ask (working the queue, or the owner said to go
+   ahead), make the extension so every existing use is unchanged, and say plainly what you added.
+4. **New building block only when nothing fits.** Put it under `src/components/<page>/` to start; it
+   graduates to the `src/components/` root the moment a second page uses it. Build it from the tokens and
+   primitives, not from hardcoded values, and tell the owner briefly that this page has a new kind of section.
+5. **Values come from tokens.** No raw `#1e3a5f` or `font-size: 26px` in a page or component: use the
+   variable. If the value genuinely does not exist yet, add it to `tokens.css` **and** `DESIGN.md` first.
+6. **Show what you added.** A new or extended shared component gets a story in the design-system page's
+   explorer (`stories.ts`), when the site has one, so the system stays honest.
+
+**Honor the design rules by default.** Carry out every request in the site's own colors, type, spacing and
+building blocks. When the owner asks for something outside them (a new color, another font, a drop shadow
+the Don'ts rule out), do what they ask: it is their site. But say in one plain sentence that it departs from
+their brand rules, and offer the closest on-brand alternative, or to make the new thing part of their design
+system (then it goes into `tokens.css` and DESIGN.md, and future pages match).
+
+**Talk about it in the owner's words.** Say *section*, *block*, *option*, *style*, *your brand colors*. Never
+*component*, *prop*, *variant*, *Astro*, *token* or *CSS*, unless the owner asks for the technical detail;
+then give it plainly.
+
+**Keep DESIGN.md and `tokens.css` in step.** A value changed in one changes in the other in the same commit,
+and so does what DESIGN.md says it is for. A draft that leaves them disagreeing is not done: the
+design-system page shows the disagreement as a red alert.
 
 The test at the end: could the *next* section like this one be built from what now exists, with no new CSS?
 If yes, the design system grew. If you wrote a one-off, it didn't.
