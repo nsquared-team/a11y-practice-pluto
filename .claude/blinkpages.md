@@ -101,3 +101,83 @@ The essentials:
   possible and hand the request to the BlinkPages team. (Anyone who can edit the site can already view every
   gated page, so the owner never locks themselves out.) If a prefix is already gated, keep it out of the
   sitemap.
+
+## Using the owner's BlinkMetrics connections from this site — Gatekeeper
+
+The owner's BlinkMetrics workspace already holds connections to the tools their business runs on — an
+email service such as Postmark or MailerLite, a project tool, a CRM. A site route that needs one of those
+(a contact form that sends an email, a signup that adds a subscriber) does **not** need that service's own
+API key. It uses a **Gatekeeper key**: a key the owner creates in BlinkMetrics that lets this site call
+that one connection, with only the permissions the owner chose, until the owner revokes it. The service's
+real credential stays inside BlinkMetrics, and every call the site makes is listed on that connection's
+**Activity** panel, so the owner can always see what the site did.
+
+**How it works.** Send the service's own request — same path, same body — to
+`https://gatekeeper.blinkmetrics.com` instead of the service's host, with the Gatekeeper key as the bearer
+token. BlinkMetrics forwards it with the connection's real credential and hands the service's response back
+unchanged. A request the key is not permitted to make is answered with `403`; an invalid, expired or revoked
+key with `401`.
+
+**Setting it up — four steps, and only the last one is yours.**
+
+1. **Find out what this site may use.** If `.env` at the repo root holds `BLINKMETRICS_SITE_TOKEN`, run
+
+   ```sh
+   curl --silent --header "Authorization: Bearer $(grep '^BLINKMETRICS_SITE_TOKEN=' .env | cut -d= -f2-)" https://app.blinkmetrics.io/api/sites/info
+   ```
+
+   and read `connections[].keys[].secret_name` — the exact name the route reads each key under. No
+   token yet: ask the owner to open BlinkMetrics → **Sites** → this site's menu → **Developer access**
+   → **Generate token** and send you the line it shows, then put that line in `.env` — first making
+   sure `.gitignore` lists `.env` (add the line if it does not). The token only lists names: it never
+   reveals a key, and it is never committed, pasted into an issue or a pull request, or used from a
+   route or a page.
+2. **The owner creates the key** when the connection you need is listed with no key (`"keys": []`).
+   In BlinkMetrics: the connection → its edit screen → **Gatekeeper Keys** → new key. A route that
+   sends or creates something needs the **edit** permission; one that only reads needs **read**. The
+   key is shown once. A connection the site's list does not carry cannot be used this way yet — say
+   so and stop.
+3. **The BlinkPages team puts the key on this site's Worker** as a secret and **switches tenant routes
+   on** for this site. Ask for both in one message, naming the secret exactly as `secret_name` spells
+   it — run the request from step 1 again and the new key is there. Key 123 on Postmark connection 456
+   is `123_GATEKEEPER_POSTMARK_KEY_CXN_456`, and the route reads it under exactly that name — with
+   bracket access, because a name that starts with a digit cannot follow a dot. One site can hold
+   several keys, for one connection or for several connections of the same service. Never paste the
+   key into this repository, an issue or a pull request.
+4. **You write the route** in `src/blink-routes.js` — one exact path per handler, deployed with the site.
+   This one sends a contact form through the owner's Postmark connection:
+
+   ```js
+   // src/blink-routes.js
+   export default {
+     "/api/contact": async (request, env) => {
+       if (request.method !== "POST") return new Response("Method not allowed", { status: 405 });
+       const form = await request.formData();
+       const sent = await fetch("https://gatekeeper.blinkmetrics.com/email", {
+         method: "POST",
+         headers: {
+           Authorization: `Bearer ${env["123_GATEKEEPER_POSTMARK_KEY_CXN_456"]}`,
+           "Content-Type": "application/json",
+         },
+         body: JSON.stringify({
+           From: "hello@example.com", // a sender the owner's Postmark account may send as
+           To: "owner@example.com",
+           Subject: `Website message from ${form.get("name")}`,
+           TextBody: form.get("message"),
+         }),
+       });
+       return sent.ok
+         ? new Response("Thanks — we got your message.")
+         : new Response("Could not send right now, please try again later.", { status: 502 });
+     },
+   };
+   ```
+
+   The path and body are exactly what Postmark documents for sending an email; only the host and the
+   bearer differ. Any other connection works the same way, with that service's own path and body.
+
+**Keeping the key safe.**
+- The key lives only in the Worker secret. Never in `src/`, `public/`, a page, a commit or a URL.
+- Call the relay from the route, never from the browser — a key in page code is a key anyone can copy.
+- Until the BlinkPages team has switched tenant routes on, the file is ignored and the path answers the
+  site's 404 page; the deploy log says which of the two it did.
