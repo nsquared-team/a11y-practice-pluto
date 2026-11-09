@@ -3,9 +3,8 @@
 > replaced whenever the platform updates.** Edits inside it are lost. Your own notes go *below* the closing
 > marker, or in the `reference/` folder — both are yours and are never touched.
 >
-> Don't want it here at all? Put the line `<!-- blinkpages-managed (AGENTS): off -->` **below the closing
-> marker** and BlinkPages will never write to this file again. Your AI assistant then loses these instructions, so the
-> drafts it makes may skip the preview step and go straight at your live site.
+> To opt out, put `<!-- blinkpages-managed (AGENTS): off -->` **below the closing marker**: BlinkPages then never
+> writes here again, and your AI assistant loses these instructions (its drafts may skip the preview step).
 
 # This repository is a live website on BlinkPages
 
@@ -24,9 +23,9 @@ skeleton, skip it.
 **If the owner asks you to “process the queue”, “apply the edits I queued” or “is anything
 waiting?”** — that is a specific thing with its own steps: see **Working the queue** at the end of this file.
 
-**If the owner says `blinkpages`, `$blinkpages` or `/blinkpages`**, they mean the same thing. This repository
-ships it as a skill at `.agents/skills/blinkpages/SKILL.md`; if your tool has loaded that skill, run it — it is
-the full procedure, content jobs included. If not, **Working the queue** below is the same procedure in short form.
+**`blinkpages`, `$blinkpages` and `/blinkpages` all mean one thing:** the skill at
+`.agents/skills/blinkpages/SKILL.md` (the full procedure, content jobs included). If your tool has not loaded it,
+**Working the queue** below is the same procedure in short form.
 
 ## The rules that matter most
 
@@ -46,22 +45,18 @@ the full procedure, content jobs included. If not, **Working the queue** below i
 - **Stay on the page you were asked about.** If the request is about one page, change that page and the
   components and data it uses. Go site-wide only when the request clearly says so ("on every page…", "the
   footer everywhere…").
-- **Follow the site's design system: it is the default for every change.** `DESIGN.md` at the repo root holds
-  the brand's rules (its colors and what each is for, the type hierarchy, layout, shapes, components, and its
-  Do's and Don'ts): read it before any visual change and honor it. The code it describes is
-  `src/styles/tokens.css` (every value), `src/components/` (shared at the root, page-specific under
-  `src/components/<page>/`) and the internal `/design-system/` page (`src/pages/design-system.astro`;
-  `/style-library/` on older sites), which shows all of it. For any new section or page, in this order: look
-  there first (*grep first, write second*); reuse a building block that fits; if one almost fits, offer to
-  **extend** it (a typed variant prop that leaves its other uses unchanged) and ask the owner first, in their
-  words: *"Your testimonial block can't show a photo yet. I can add that as an option, so this page and future
-  ones can use it. Shall I?"*; never copy it, restyle it globally or make a one-off variant (within reason: a
-  maze of conditionals is a new component); a new component starts under `src/components/<page>/`; values
-  come from `tokens.css`, never hardcoded; a new or extended shared component gets a story on the
-  design-system page. If the owner asks for something off-brand, do it, but say so in one plain sentence and
-  offer to make it part of their design system. A value changes in `tokens.css` and `DESIGN.md` together.
-  Keep technical words (component, prop, variant, Astro, token, CSS) out of what you tell the owner unless
-  they ask.
+- **Follow the site's design system: it is the default for every change.** Read `DESIGN.md` (the brand's
+  colors and their uses, type, layout, shapes, components, Do's and Don'ts) before any visual change, and honor
+  it. Its code: `src/styles/tokens.css` (every value), `src/components/` (shared at the root, page-specific
+  under `src/components/<page>/`) and the internal `/design-system/` page (`/style-library/` on older sites).
+  For a new section or page: look there first (*grep first, write second*); reuse a block that fits; if one
+  almost fits, ask the owner before **extending** it with a typed variant prop that leaves its other uses
+  unchanged (*"Your testimonial block can't show a photo yet. I can add that as an option. Shall I?"*); never
+  copy it, restyle it globally or make a one-off variant; new components start under `src/components/<page>/`;
+  values come from `tokens.css`, never hardcoded; a new or extended shared component gets a story on the
+  design-system page. Asked for something off-brand: do it, say so in one plain sentence, and offer to add it to
+  their design system. Change a value in `tokens.css` and `DESIGN.md` together. Keep technical words
+  (component, prop, variant, token, CSS) out of what you tell the owner unless they ask.
 - **"Make this page private" is not something you can build.** Restricting who may *view* a page is a
   BlinkPages account setting, not a code change, and it cannot be shipped from this repository. Never
   substitute a password page, a hidden/unlisted URL, a `noindex` tag, or a JavaScript "login" — none of those
@@ -132,19 +127,15 @@ collapsed to a single `-`, and leading and trailing `-` removed. The `/` is not 
 `draft-holiday/v1` becomes `draft-holiday-v1`, giving
 `https://draft-holiday-v1--a11y-practice-pluto.blinkpages.dev`.
 
-**That arithmetic only holds while the slug is 37 characters or fewer.** Past that, BlinkPages replaces
-the tail with a short hash derived from the whole name — you cannot work that out by hand, so do not try
-and do not guess: say the address will be on the pull request, and leave it there. It is one more reason
-to keep `<slug>` short.
+**That only holds while the slug is 37 characters or fewer.** Past that the tail becomes a hash you cannot
+work out by hand: do not guess; say the address will be on the pull request.
 
 Hand that over as where the preview **will** appear once the build finishes — never as somewhere you have
 checked. You cannot see from here whether the build succeeded, and if it failed there is no preview at all.
 
-**Two branch names that reduce to the same alias collide** — `draft-holiday/v1` and `draft-holiday-v1`
-both become `draft-holiday-v1`. BlinkPages will not hand your build an address another open draft already
-owns: the build **fails with an error naming the branch that holds it**, and there is no preview until one
-of them is renamed. Choose a short, distinctive `<slug>` for every new draft, and never reuse one that an
-open draft already has.
+**Two branch names with the same alias collide** (`draft-holiday/v1` and `draft-holiday-v1`): the second
+build **fails, naming the branch that holds the address**, and gets no preview until one is renamed. Never
+reuse a `<slug>` an open draft already has.
 
 Previews for this site are private: the first time the owner opens one they are asked to sign in with their site login. Say so when you hand over the address — otherwise the sign-in screen reads as a broken link.
 
@@ -210,7 +201,6 @@ Owners speak in *site* words. Each one maps to a single mechanic; the editor's o
 | "delete / remove this draft" | "Remove this draft" = close its pull request and **keep** the branch (`gh pr close <n>`, never `--delete-branch`) so it can be reopened. |
 | "what drafts do I have?" | Open pull requests whose branch starts with `draft-` (`gh pr list --state open`) — or "open Drafts in your editor". Answer in draft *names* (the titles), never branch names. |
 | "mark this post as a draft" | Astro's `draft: true` on a content entry (hides it from the site) — **not** a BlinkPages draft. Ask which they mean if unclear; the change itself still ships as a BlinkPages draft. |
-| "make it private" | A BlinkPages setting, not code — see the rules above. |
 
 ## Working the queue
 
@@ -245,9 +235,8 @@ sandbox — it needs the network and writes its login under your home folder):
 node .blinkpages/queue.mjs list
 ```
 
-It prints a link. The **owner** opens it, checks the code shown matches, and clicks **Approve** — there is
-nothing to copy back. The login is cached for **24 hours**, so this comes round about once a day: that is
-normal, not a fault. The command then lists what's pending. If it reports that this site has no queue
+It prints a link; the **owner** opens it, checks the code matches and clicks **Approve** (nothing to copy back).
+The login lasts **24 hours**, so a daily prompt is normal. The command then lists what's pending. If it reports that this site has no queue
 endpoints yet, stop and use the paste-the-request route above.
 
 **2. Take one job.** Each row has an id:
