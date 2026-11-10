@@ -75,9 +75,9 @@ Find the single tenant marker and read your identity from it:
 ls .migrate-to-astro/tenant.*.json
 ```
 
-- **Exactly one match** → read it. Take `tenantId` and `github.writableRoots` (the roots you may write to,
-  usually `public/` and `src/`). If the marker is missing, fall back to `wrangler.jsonc` for the worker name,
-  but `writableRoots` then defaults to `["public/", "src/"]`.
+- **Exactly one match** → read it. Take `tenantId` and `github.writableRoots` (the roots you may write to).
+  A marker with no `github.writableRoots` means the fleet default, `["public/", "src/"]`. If the marker is
+  missing, fall back to `wrangler.jsonc` for the worker name, and the roots are that same default.
 - **Zero or many matches** → **stop.** You're not at the root of a single BlinkPages tenant repo. `cd` into
   the site you want to edit and re-run.
 

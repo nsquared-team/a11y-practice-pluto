@@ -44,8 +44,9 @@ request came from — may be empty), and optional uploaded `images`.
 3. **Place and finish any uploaded images.** Uploaded replacements arrive on disk (the wrapper pulls them).
    Put them in the right place, wire them into the page, and crop / size / optimize as the layout needs.
 
-4. **Respect `writableRoots`.** Every tenant declares the roots you may write to (usually `src/` and
-   `public/`). Never write outside them. Read the tenant's config for the authoritative list.
+4. **Respect `writableRoots`.** Every tenant has roots you may write to, and you never write outside them.
+   Read the tenant's config for the authoritative list. An absent `github.writableRoots` means the fleet
+   default, `public/` and `src/` (`scripts/lib/tenant-defaults.mjs` in blinkpages-platform).
 
 5. **One logical concern per commit.** If the prompt bundles two unrelated changes, make two commits. Keep
    each commit message short and concrete: `blinkpages-ai: <what changed>`.
