@@ -24,8 +24,9 @@ operator profile's copy.
 
 ## Do the change
 
-Work interactively in your AI tool's session (unless an `--auto` mode says otherwise), at whatever model and
-reasoning effort is selected — pick what fits the task. The job carries a `prompt`, a `pageKey` (the page the
+Work interactively in your AI tool's session (unless an `--auto` mode says otherwise — and working the tenant
+queue with `/blinkpages` never asks: see **When to stop and ask**), at whatever model and reasoning effort is
+selected — pick what fits the task. The job carries a `prompt`, a `pageKey` (the page the
 request came from — may be empty), and optional uploaded `images`.
 
 1. **Read the page first — and default to it.** Resolve `pageKey` to the source file(s) that render it and
@@ -362,7 +363,7 @@ invent a taxonomy value. `slug` stays what the console chose — it's the addres
 
 **Claude artifacts** are often an *app*, not a document — buttons, tabs, state. Import the *content* (the text,
 the tables, the reference material), not the interactivity; if the artifact is a tool with no prose to speak of,
-stop and ask what the owner wants the page to say.
+stop and ask what the owner wants the page to say (working the tenant queue: strand the job on that question).
 
 **Drafting from a brief** (no document, or a brief on top of an import): write in the site's voice — read the
 `reference/` folder and the site's style library or brand page if it has one (usually
@@ -386,8 +387,9 @@ wired up for any tool. This path is scoped to **edit / replace / crop / restyle*
 
 A request to **generate a brand-new image** → **STOP**. Do not hand-draw an SVG, do not invent a placeholder,
 do not approximate. The wrapper decides what to do with the stop (the operator marks the job `failed` with
-`error: "needs a real image — please upload one"`; the tenant is told to upload one and re-run). Either way,
-**never** ship a fabricated image as a substitute.
+`error: "needs a real image — please upload one"`; the tenant queue drain strands it — the rest of the change
+made, the question of which image left in `.blinkpages/questions/<jobId>.md`). Either way, **never** ship a
+fabricated image as a substitute.
 
 **Before you stop, ask whether the site already has it.** The media library is two stores: files in the repo
 under `public/assets/media`, and files that live **only** in the site's R2 media bucket, which have no local
@@ -411,6 +413,12 @@ mode, make a **reasonable assumption** instead of asking, and only hard-stop on 
 request you'd have to guess wildly at, or a needs-a-real-image case) — recording the blocker rather than
 guessing.
 
+**Working the tenant queue (`/blinkpages`, `$blinkpages`) never asks** — it is one-shot and nobody is watching.
+Every "stop and ask" in this file becomes: take a reasonable, easily reversed reading and record it (commit
+body, a PR comment, the recap), or, when the job truly can't proceed, **strand** it — the rest done, the open
+questions in `.blinkpages/questions/<jobId>.md` on its draft, the job reported `failed` with text the owner can
+act on. The skill's **Strand a job** is the procedure.
+
 **"Make this page/section private" is one of those blockers.** Gating a URL prefix is a **platform config**
 change — `protectedPaths` in the tenant's central config — which opens a prefix (and every subpath under it)
 to a named view audience: exact emails, a whole domain, or, only on tenants that bring their own Cloudflare
@@ -418,5 +426,6 @@ Access, a Google Workspace group matched on the group's **email** (`marketing-te
 Google's numeric group id. It is not inside `writableRoots` and cannot be shipped from the repo, so **STOP**:
 never substitute a password page, an unlisted URL, a `noindex` tag, or a JS "login" — none of them gate
 anything, and shipping one *looks* like the request was fulfilled. Say what the platform can do and hand the
-request over (in `--auto`, record it as the blocker rather than improvising). The one repo-side chore that
+request over (in `--auto`, record it as the blocker rather than improvising; a queued job is reported `failed`
+with what to do instead — there is no decision that makes it doable from the repo, so it is never a strand). The one repo-side chore that
 does belong to a gated prefix: keep it out of the sitemap.

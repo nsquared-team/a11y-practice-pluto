@@ -1,386 +1,178 @@
 ---
 name: blinkpages
-description: Work this site's BlinkPages queue — "blinkpages", "process the queue", "work my queued edits", "apply the edits I queued", "anything waiting from the editor?", "drain the queue", "/blinkpages", "$blinkpages". With no argument it takes each queued "Edit with AI" request and admin-console "New <type> with AI" / import-from-a-link content job in turn and delivers it as a previewable draft. You do NOT need this to change the site — to make a change, just say what you want, no command. Run it from inside this site's repository, in whichever AI coding tool you use, at whatever model you've selected.
-argument-hint: "[--auto] — no argument works everything queued for this site"
+description: Work this site's BlinkPages queue start to finish without stopping to ask — "blinkpages", "work my queue", "process the queue", "work my queued edits", "apply the edits I queued", "anything waiting from the editor?", "drain the queue", "/blinkpages", "$blinkpages". One pass takes every queued "Edit with AI" request, admin-console "New <type> with AI" / import-from-a-link content job and update-from-the-live-site job in turn, delivers each as a previewable draft, and leaves anything that needs the owner's decision waiting in its draft with the questions written down. You do NOT need this to change the site — to make a change, just say what you want, no command. Run it from inside this site's repository, in whichever AI coding tool you use, at whatever model you've selected.
 ---
 
 <!--
-  ════════════════════════════════════════════════════════════════════════════════════════════════
-  CENTRALLY MANAGED — DO NOT EDIT THIS SKILL.
-  It is owned by the BlinkPages platform and force-overwritten on every update; local changes here
-  will be lost on the next sync. Want different or extra behavior? Create your OWN skill in a NEW
-  directory under .claude/skills/<your-skill-name>/ (Claude Code) or .agents/skills/<your-skill-name>/
-  (Codex and other agentskills.io tools) — those are yours and are never touched.
-  This file is stamped, byte-identical, to BOTH .claude/skills/blinkpages/ and .agents/skills/blinkpages/.
+  CENTRALLY MANAGED — DO NOT EDIT THIS SKILL. BlinkPages owns it and overwrites it on every sync, so local
+  changes are lost. It is stamped byte-identical to .claude/skills/blinkpages/ and .agents/skills/blinkpages/.
+  Want different or extra behavior? Create your OWN skill in a new folder, .claude/skills/<your-skill>/
+  (Claude Code) or .agents/skills/<your-skill>/ (Codex and other agentskills.io tools): never touched.
   Source of truth: nsquared-team/blinkpages-platform → managed-skills/blinkpages/
-  ════════════════════════════════════════════════════════════════════════════════════════════════
 -->
 
-# blinkpages — the BlinkPages command for THIS site
+# blinkpages — work this site's queue, start to finish
 
-Type **`$blinkpages`** in Codex — the CLI, the IDE extension, or the ChatGPT desktop app — and
-**`/blinkpages`** in Claude Code. Or just say *"work my queue"*: either tool will pick this up from the
-description. Codex also lists skills under `/skills`, and some surfaces offer them in the `/` menu; if a
-slash spelling answers "Unrecognized command", use `$blinkpages`. Same skill, same file.
+Type **`/blinkpages`** in Claude Code or **`$blinkpages`** in Codex (the CLI, the IDE extension or the ChatGPT
+desktop app), or just say *"work my queue"*. If a slash spelling answers "Unrecognized command", use
+`$blinkpages`.
 
-**With no argument, this works the queue** — that is the default and, today, the whole of it. The queue holds
-the changes the owner asked for from the in-page **"Edit with AI"** card, and the **"New <type> with AI"** /
-import-from-a-link content jobs from the admin console. They wait in this site's own queue; nothing applies
-them until someone runs this.
+This is a **one-shot, non-interactive queue drainer**. It works every job the owner queued (in-page **"Edit
+with AI"** requests, the admin console's **"New <type> with AI"** and import-from-a-link jobs) start to finish,
+never stopping to ask, then reports. That is its whole scope: it takes no arguments, and `--auto` changes
+nothing. A change described in the invoking message is not a queue job: it is an ordinary request that needs
+no command, so handle it as one.
 
-The name is deliberately broad. If BlinkPages later grows other per-site operations worth a command, they
-become arguments here rather than a second skill and a third rename — but **the no-argument default stays the
-queue**, because that is what an owner who types `/blinkpages` or `$blinkpages` after queueing an edit is asking for.
+It touches only this repo and this site's own `/_blink` worker (never another site, a shared queue or a
+BlinkPages secret), pushes with **your** git identity, and runs at the model and effort you selected.
 
-**You do not need this skill to change the site.** If the owner just says *"add a Black Friday banner"*, do it
-— no command, no ceremony. The conventions are the same either way and they are already loaded — Claude Code
-through the repo's `CLAUDE.md`, which imports `.claude/blinkpages.md` (draft-by-default, the preview link,
-`writableRoots` and the rest); Codex and every other agent through the managed region at the top of `AGENTS.md`.
-The full craft is `.claude/blinkpages-editing.md` — a plain Markdown file any tool can open (it lives under
-`.claude/` for historical reasons only). This skill exists because a *queued* change needs claiming, fetching
-and a status written back — not because editing needs a command.
+## Before you start
 
-It is **not** the editor, and it never reaches any other tenant, any shared queue, or any BlinkPages secret —
-it only touches this repo, in place, pushing with **your** git identity.
+- **One site.** `ls .migrate-to-astro/tenant.*.json` must match exactly one file: read `tenantId` and
+  `github.writableRoots` from it (absent → `["public/", "src/"]`). Zero or several → stop: this is not the
+  root of one BlinkPages site; `cd` into it and re-run. You clone nothing and need no token.
+- **The craft.** Read `.claude/blinkpages-editing.md` (plain Markdown, any tool can open it) before the first
+  job. Every change follows it, and nothing loads it for you.
+- **Network.** `node .blinkpages/queue.mjs` talks to this site over HTTPS and caches its login in
+  `~/.config/blinkpages/`. In a sandbox (Codex by default: network off, writes limited to the workspace),
+  `fetch failed`, `ECONNREFUSED` or `EACCES` means: run it outside the sandbox (approve the escalation) and
+  retry. **A failure to reach the queue is never "nothing queued".**
 
-**Model & effort are yours.** This runs at whatever model and reasoning effort you've selected in your AI tool —
-nothing here forces a specific one. A big layout or multi-page job is worth a stronger model and higher effort;
-a quick copy fix isn't.
+## Decide without asking: assume or strand
 
-## How to invoke
+Nobody watches a drain, so **never stop it to ask.** For each job:
 
-**Interactive is the default** — ask a follow-up whenever a queued request is genuinely ambiguous.
+- **Clear** → do it.
+- **Unclear, but a reasonable, easily reversed reading exists** → take it and finish the job. Record the
+  assumption where the owner will see it at review: the commit message body, a PR comment
+  (`gh pr comment <branch>`) when there is a PR and `gh`, and the recap.
+- **Can't proceed safely**: it needs something only the owner has (an image in neither the repo nor the media
+  library, a required value), or the readings lead to materially different results → **strand it** (below).
 
-- **No argument** → the default: work the queue. List what's pending, then take each job in turn (**Drain
-  your queued requests**, at the bottom). If the queue is empty, say so — don't go looking for something to do,
-  and don't offer to invent work.
-- **`--auto`** → run non-interactively: make a reasonable assumption instead of asking, and hard-stop only on a
-  true blocker (see `.claude/blinkpages-editing.md`).
+**This overrides the loaded conventions:** wherever `.claude/blinkpages-editing.md`, `AGENTS.md` or
+`.claude/blinkpages.md` say to stop and ask the owner, a queue job strands instead. Never invent an image, a
+fact or a value to avoid a strand. Extending a shared building block so every existing use is unchanged is an
+assumption, not a strand (the methodology says so). Work this repo cannot do at all (making a page private is
+a BlinkPages setting) is `failed`, saying what to do instead.
 
-How you say it is the only thing that differs by tool. Whatever follows the name — `--auto`, or a description
-of a change — is plain text in your message; there is no argument syntax to get right (`/blinkpages --auto` and
-`$blinkpages --auto` mean the same thing).
+## Work the queue
 
-If the owner describes a change while invoking this, that is not a queue job — just make the change directly,
-following the same conventions.
-
-The long `node …/queue.mjs list` command below is only the mechanism; invoking the skill runs the whole drain
-flow for you.
-
-## 1. Confirm you're inside one tenant repo
-
-Find the single tenant marker and read your identity from it:
-
-```bash
-ls .migrate-to-astro/tenant.*.json
-```
-
-- **Exactly one match** → read it. Take `tenantId` and `github.writableRoots` (the roots you may write to).
-  A marker with no `github.writableRoots` means the fleet default, `["public/", "src/"]`. If the marker is
-  missing, fall back to `wrangler.jsonc` for the worker name, and the roots are that same default.
-- **Zero or many matches** → **stop.** You're not at the root of a single BlinkPages tenant repo. `cd` into
-  the site you want to edit and re-run.
-
-You do **not** clone anything and you do **not** need any token — you're already in the repo, authenticated
-to push to it as yourself.
-
-## 2. Understand the change
-
-In interactive mode, the change is whatever you describe (in your message, or after the command in it).
-If you queued an edit request from the in-page **Edit with AI** card and want to apply it here, paste that
-prompt. Read it carefully; if it's genuinely ambiguous, ask before editing (in `--auto`, make a reasonable
-assumption instead — see the methodology doc).
-
-## 3. Make the edit
-
-Follow **`.claude/blinkpages-editing.md`** — the shared editing craft: read the page
-first, make the multi-file / layout / image edits, place/crop/optimize any images, and **stay inside
-`writableRoots`**. Keep **one logical concern per commit**.
-
-**Draft by default — protect the live site.** A *draft* is a `draft-<slug>/v1` branch + a regular **open** PR off
-the live branch — never a GitHub draft-status PR (no `--draft`, ever; PRs stay ready to merge). A
-*variation/option* is a sibling draft in the same `draft-<slug>/…` group, its PR **also off `main`** — never a
-sub-PR off another draft. If the owner references an existing draft or option, commit on that branch. Everything
-else is about the live site and becomes a **new draft** by default — even small text fixes. Commit straight to
-the live branch only when the owner has explicitly confirmed they want to skip the preview (recommend the draft
-first). Full rule, recipe, and how to build options: `.claude/blinkpages-editing.md` →
-**Draft by default**, **The draft loop**, and **Multiple options**.
-
-**Asked for multiple options ("a few variations", "three versions to choose from")?** Follow
-**`.claude/blinkpages-editing.md` → "Multiple options: sibling drafts in a group"**: build
-them as **flat siblings** in one `draft-<slug>/…` group — `draft-<slug>/v1`, `/v2`, … each a PR **`--base main`**
-(`git checkout -b draft-<slug>/vN draft-<slug>/v1`, push, `gh pr create --base main`), never a sub-PR off another
-draft. Each becomes its own preview in the editor's drafts list + compare view, clustered by folder; publishing
-any one goes live and discards the rest. If you're on `main`, create `…/v1` first — don't pile options onto the
-live branch.
-
-**Images:** edit / replace / crop / restyle only — there is no image generator. If the change truly needs a
-brand-new photo or raster, **stop** and add the image to the repo yourself (e.g. under `public/`), then
-re-run referencing it. Never fabricate an image as a substitute. (Full rule: `.claude/blinkpages-editing.md`.)
-
-**Check what the site already has before you add anything.** `ls public/assets/media` is *not* the
-inventory — large files are stored in the site's media bucket, where they have **no local file** at all.
-Ask for the real list:
-
-```bash
-node .blinkpages/queue.mjs media --q <term>     # add --kind image|video|audio|doc, --all for everything
-```
-
-A **bucket-only** file has no path on disk, but its `/assets/media/...` URL works on the live site and on
-every preview: reference it by path in HTML/Markdown, and **never `import` one** via `astro:assets`, which
-needs a file to exist. Never delete a reference just because the file is missing locally — for these that is
-normal. Prefer reusing what is there over adding another copy. (If the command says this site's editor
-doesn't list media yet, fall back to `ls public/assets/media`, knowing it will miss the bucket.)
-
-## 4. Deliver it: commit → push → PR → preview link
-
-Stage only files inside `writableRoots`, one logical concern per commit. Then route by where you are:
-
-- **On a `draft-*` branch** (the editor pre-created it, or the owner pointed you at an existing draft/variation)
-  → commit and push; the draft's open PR rebuilds its preview:
-
-  ```bash
-  git add <changed paths within writableRoots>
-  git commit -m "blinkpages-ai: <short summary of the change>"
-  git push
-  node .blinkpages/wait-deploy.mjs     # waits for THIS push's build; prints the preview link once it's live
-  ```
-
-  If the branch somehow has **no open PR**, open one now (`gh pr create --base main` — every draft and option
-  bases on `main`; a regular open PR, never `--draft`): without it there is no preview and the owner can't see
-  the draft.
-
-- **On the live branch (`main`)** → do **not** just push. Run **the draft loop** (full version with caveats:
-  `.claude/blinkpages-editing.md` → **The draft loop**):
-
-  ```bash
-  git fetch origin && git checkout -b draft-<slug>/v1 origin/main   # foldered from birth (keep <slug> short)
-  git add <changed paths> && git commit -m "blinkpages-ai: <what changed>"
-  git push -u origin draft-<slug>/v1
-  gh pr create --base main --head draft-<slug>/v1 \
-    --title "<short human title — names the draft in the owner's editor>" \
-    --body "<one-line plain-language summary>"      # a regular open PR — NEVER --draft
-  node .blinkpages/wait-deploy.mjs draft-<slug>/v1   # waits for the build; prints the live preview link
-  ```
-
-- **The owner explicitly confirmed a live edit** → commit and push on `main`; that triggers the production
-  deploy. Tell the owner it's live.
-
-**No `gh`, or not signed in** (common in a local Codex setup that has `git` only): push the branch anyway, then
-**stop** and tell the owner to press **Create PR** in their AI tool — never hand back a bare branch as a draft;
-without an open PR there is no preview. **No network at all** (a cloud task): you cannot push or read the queue —
-follow `AGENTS.md` → **Delivering a draft** → **Route B** (commit only, then tell the owner what to press), and
-never report the queue as empty when you could not look. Queued jobs are unaffected by the first case: their
-branch and PR already exist, so they need only `git push`.
-
-For drafts, the loop isn't done until the owner has the **preview link** — the address
-`node .blinkpages/wait-deploy.mjs` prints once the build of your push is live (it is the link in the PR's sticky
-"🔍 Open Preview" comment). **Never send a preview link before it says so:** the address exists a minute before
-the build does, and opened early it shows a bare Cloudflare error page. `gh pr checks` can't tell you — this repo
-has no checks; the build runs at BlinkPages. If it exits **1**, the draft didn't build — fix it and push again,
-and send no link. **2**: still building — tell the owner the draft is saved and its preview is on its way, then
-re-run before sending the link. **3**: you can't check from here (no `gh`, no open PR) — the no-`gh` route above;
-there the address is only where the preview *will* be (`https://<alias>--<tenantId>.blinkpages.dev`, `<alias>` =
-the branch lowercased with every non-alphanumeric run collapsed to `-`, e.g. `draft-holiday/v2` →
-`draft-holiday-v2`; slugs over 37 characters get a hash, so leave those to the PR comment), never somewhere you
-checked. Previews ask for the site login the first time — say so. Hand it over in their language — draft / preview / publish, not branch / commit / PR; the methodology's
-**What the owner means** table maps every such word (undo, remove, compare, "another version"…) to its mechanic.
-There's still no status to report anywhere and no queue to update in interactive mode.
-
-## 5. Make it your own (but not this file)
-
-This skill is centrally managed and will be overwritten when the BlinkPages team ships an update — **don't
-edit it.** If you want different behavior, extra steps, or a site-specific workflow, create a **new** skill in
-its own directory under `.claude/skills/<your-skill-name>/` (Claude Code) or `.agents/skills/<your-skill-name>/`
-(Codex and other agentskills.io tools). Anything outside `.claude/skills/blinkpages/` and
-`.agents/skills/blinkpages/` is yours and is never touched by the platform sync.
-
----
-
-## Drain your queued "Edit with AI" requests
-
-Instead of pasting a prompt, you can pick up the edits you queued from the in-page **Edit with AI**
-card. This talks **only to your own site's worker** (the `/_blink` endpoints) — no shared queue, no BlinkPages
-secret. You authorize once, then list → claim → edit → push → report status, and the in-page progress card
-resolves on its own.
-
-**It needs the network, and a writable home folder.** `node .blinkpages/queue.mjs` talks to this site over
-HTTPS and caches its login under `~/.config/blinkpages/`. Some tools run commands in a sandbox by default —
-Codex does: network off, writes limited to the workspace. If a queue command fails with `fetch failed`,
-`ECONNREFUSED` or `EACCES`, ask to run it outside the sandbox (or approve the escalation your tool offers) and
-retry. **A failure here is never "nothing queued"** — say the queue was unreachable, don't report it empty.
-
-1. **Authorize (single click, lasts a day).** Run:
+1. **Authorize and list.**
 
    ```bash
    node .blinkpages/queue.mjs list
    ```
 
-   It prints a one-click link — open it, confirm the shown code, click **Approve**. Nothing to copy or paste
-   back. The login is cached for **24 hours**, so this comes round about once a day — that is normal, not a
-   fault (and a session that starts from a fresh sandbox authorizes once per session). The command then lists
-   your pending edits.
-
-2. **Pick a job, claim it, pull its images.** Take a `<id>` from the list:
+   It prints a one-click link: the owner opens it, checks the code and clicks **Approve** (nothing to paste
+   back). The login lasts **24 hours**, so this comes round about once a day: normal, not a fault. Empty →
+   say so and stop; never invent work. Route each pending row by its tag: none → a page edit (steps 2–6);
+   `✎ CONTENT` → **Content jobs**; `⟂ MERGE-CONFLICT` → **Update-from-the-live-site jobs** (both below; they
+   claim, start and report the same way).
+2. **Claim it.**
 
    ```bash
    node .blinkpages/queue.mjs claim --job <id> --by "$(git config user.email)"
-   node .blinkpages/queue.mjs pull-images --job <id> --dest .precision-images
    ```
 
-   The claim returns the job's `prompt`, `pageKey`, `targetBranch`, and a `claimToken` (keep it — pass it as
-   `--claim-token` on every status write). Make sure you're on `targetBranch` before editing. The job's `targetBranch` is the owner's explicit
-   choice, made on the editor's "Save as a new draft" checkbox — honor it even when it's the live branch; don't
-   re-route a queued job into a new draft.
-
-   A row tagged **`✎ CONTENT`** is not a page edit — it's a **new post/page** queued from the admin console
-   (a brief to draft from, a link to import, or both). Claim it the same way, then follow **Content jobs**
-   below instead of steps 3–4.
-
-3. **Mark it running, then make the edit.** Set status `running`, then do the change exactly as in steps 3–4
-   above — follow `.claude/blinkpages-editing.md`, stay inside `writableRoots`, place
-   the pulled images, and commit + push on **your** identity (one logical concern per commit):
+   It returns `prompt`, `pageKey`, `targetBranch` and a `claimToken`: keep it, and pass
+   `--claim-token <claimToken>` on every `set`.
+3. **Check out its branch:** `git fetch origin && git checkout <targetBranch> && git pull --ff-only`.
+   `targetBranch` is the owner's choice (the editor's "Save as a new draft" checkbox): honour it even when it
+   is the live branch, and never re-route a job. The one exception is a strand (below). A missing branch
+   means the owner discarded the draft: `failed --error "draft was discarded — nothing to write"`.
+4. **Start.**
 
    ```bash
    node .blinkpages/queue.mjs set --job <id> --status running --claim-token <claimToken>
+   node .blinkpages/queue.mjs pull-images --job <id> --dest .precision-images
    ```
 
-4. **Report status back.** After the push lands, write the outcome so the in-page card resolves:
+5. **Make the change** per `.claude/blinkpages-editing.md`, inside `writableRoots`, one concern per commit
+   (`blinkpages-ai: <what changed>`), placing the pulled images. Before adding any image, check what the site
+   has: `node .blinkpages/queue.mjs media --q <term>` (`--kind image|video|audio|doc`, `--all` for everything).
+   `ls` misses bucket-only files, which have no local copy:
+   reference them by their `/assets/media/…` path, never `import` one. **Never commit `.precision-images/` or
+   `.precision-source/`.** A queued "give me three versions" builds sibling drafts (the methodology's
+   **Multiple options**) and reports `done` once, on this job, with the first option's commit.
+6. **Push and report.**
 
    ```bash
-   node .blinkpages/queue.mjs set --job <id> --status done --commit <sha> --claim-token <claimToken>
-   # or, if it didn't work out:
-   node .blinkpages/queue.mjs set --job <id> --status failed --error "what went wrong" --claim-token <claimToken>
+   git push
+   node .blinkpages/queue.mjs set --job <id> --status done --commit "$(git rev-parse HEAD)" --claim-token <claimToken>
+   # or, when it can't be done and isn't a strand:
+   node .blinkpages/queue.mjs set --job <id> --status failed --error "<what happened, what to do next>" --claim-token <claimToken>
    ```
 
-If your site's worker doesn't have the queue endpoints yet, the script says so and exits cleanly — fall back
-to **interactive mode** (describe / paste the prompt, per the steps above) and edit in place.
+   The owner reads `error` on the in-page card: write it for them. Then take the next job.
+7. **Recap**, once the queue is done, in the owner's words (draft, preview, publish; never branch, commit,
+   PR): each job done, done on an assumption (say which), stranded (the question, and where it waits) or
+   failed. Hand over a preview link only after `node .blinkpages/wait-deploy.mjs <branch>` prints it (run it
+   per pushed draft now). Exit **1** = the build failed: fix, push, re-run; no link. **2** = still building:
+   say it is on its way, re-run before linking. **3** = can't check (no `gh`, no PR, or the live branch,
+   where the job is simply live). Never publish.
+
+## Strand a job
+
+1. If `targetBranch` is the live branch, never commit there: `git checkout -b draft-<slug>/v1` off it.
+2. Do everything that does not depend on the open question; leave the dependent part undone.
+3. Write `.blinkpages/questions/<jobId>.md`, the single exception to `writableRoots`. BlinkPages manages that
+   folder and every platform sync of the live branch wipes and re-stamps it, so the file can never linger on
+   the live site.
+
+   ```markdown
+   # Open questions: job <jobId> (<kind>)
+   Request (verbatim): <the job's prompt>
+   Done so far: <what you changed>
+   1. <question>. Options: <a> / <b>. Recommended: <a>, because <why>. Changes with the answer: <what>.
+   How to finish: make the remaining change, delete this file in the same commit, push,
+   run `node .blinkpages/wait-deploy.mjs <branch>`, then hand over the preview link.
+   ```
+
+4. Commit (`blinkpages-ai: <what was done> — needs decisions`) and push. A draft from step 1 gets a regular
+   PR: `gh pr create --base <live> --head draft-<slug>/v1 --title "<short human title>" --body "<one line>"`,
+   never `--draft`. With `gh`, also post a PR comment summarising the questions and pointing at the file.
+5. Report it `failed` (a stand-in until the editor has a status for this). The owner reads the text on the
+   card; without `gh` (so no PR), name the pushed branch instead of the draft:
+   `--error "Needs your decision (2): <first question, short>. It's waiting in the draft '<PR title>' — open that draft in Claude Code or Codex and say 'answer the open questions'."`
+6. Take the next job.
+
+## If you can't push or reach the network
+
+- **No `gh`, or not signed in:** queued jobs need only `git push` (their branch and PR exist). Without the
+  check, an address you work out is only where the preview *will* be: say so.
+- **No network at all** (a cloud task): you can't read the queue or push. Say you could not look, and stop.
+- **`list` says this site's worker has no queue endpoints yet:** say so and stop.
+
+## Other kinds of job
 
 ### Update-from-the-live-site jobs (`kind:"merge-conflict"`)
 
-When the live site moved past a draft and it couldn't be brought up to date automatically, the editor queues the
-update here. **The job's `prompt` is the whole procedure** — the merge policy (keep the draft's design, take the
-live site's newer copy unless that copy is the draft's point, bring new live content in restyled), the intent
-brief and the report shape. Follow it: merge the live branch INTO the draft with a real merge commit
-(`git config merge.conflictStyle zdiff3` first; never rebase, never force-push, never `-X ours/theirs` over the
-whole merge), commit with the plain headline `Merge branch '<base>' into <draft>`, then report what you decided:
+Tagged `⟂ MERGE-CONFLICT`: the live site moved past a draft and it could not be brought up to date
+automatically. **The job's `prompt` is the whole procedure** (merge policy, intent brief, report shape):
+follow it. Merge the live branch INTO the draft with a real merge commit (`git config merge.conflictStyle
+zdiff3` first; never rebase, never force-push, never `-X ours|theirs` over the whole merge), headline
+`Merge branch '<base>' into <draft>`, push, then report what you decided:
 
 ```bash
 node .blinkpages/queue.mjs set --job <id> --status done --commit <sha> --claim-token <claimToken> \
   --report report.json --draft-before <sha> --live-before <sha> --merge-base <sha> --resolved-by ai
 ```
 
-The site owner then sees "Your draft is up to date with the live site" with each decision and a one-tap way to
-use the other version.
+The owner sees each decision with a one-tap way to use the other version, so follow the policy rather than
+strand.
 
-### Content jobs (`kind:"content"`)
+### Content jobs
 
-The admin console's **New <type>** flows queue a different kind of job: not a change to an existing page but a
-**new entry in one of the site's content collections** — "New Post with AI", or "New Post" with a link to
-import (a Google Doc, a public Claude artifact, a web page). The console has already done every deterministic
-step: the draft branch and its PR exist (`targetBranch`), the entry's address is decided, and — when the
-collection's schema allows it — a stub file with valid frontmatter is already on the branch. What's left for you
-is the *content*.
+A row tagged **`✎ CONTENT`** (plus `import <host>` for a snapshotted link, `⚠ <warning>` when that snapshot is
+suspect) is a **new entry in a content collection**, queued from the admin console: "New <type> with AI", a
+link to import, or both. The console already made the draft branch and its PR, chose the address and usually
+wrote a stub. **Before touching one, read [content-jobs.md](content-jobs.md)**, next to this file (in
+`.agents/skills/blinkpages/` or `.claude/skills/blinkpages/`, identical copies), every time, including after a
+compaction: it is not re-attached. Even without it, these hold:
 
-**How they appear in `list`** — tagged `✎ CONTENT`, plus `import <host>` when a link was snapshotted and
-`⚠ <warning>` when that snapshot is suspect; the second line names the file and its address, the third is the
-first line of the prompt:
-
-```
-  • d_9f1…  pending/queued-for-precision ✎ CONTENT import docs.google.com  ·  4m old
-      posts → src/content/posts/q3-launch-recap.md  (/q3-launch-recap/)
-      Import the linked Google Doc into a new Post "Q3 launch recap".
-```
-
-`[no stub — create the file]` on the second line means the console could **not** write a stub (the schema
-needs values no template can guess) — you create the file.
-
-**The record** (from `claim`, or `list --json`) adds to the usual shape:
-
-```jsonc
-{ "kind": "content", "source": "content-console", "targetBranch": "draft-q3-launch-recap/v1",
-  "entry": { "type": "posts", "collection": "posts", "path": "src/content/posts/q3-launch-recap.md",
-             "url": "/q3-launch-recap/", "stub": true, "required": ["title", "date", "slug"],
-             "dir": "src/content/posts", "ext": ".md" },
-  "importSource": { "url": "https://docs.google.com/document/d/…/edit", "finalUrl": "…/export?format=html",
-                    "kind": "google-doc", "attachmentId": "a_…", "contentType": "text/html", "bytes": 48213,
-                    "title": "Q3 launch recap", "warning": null },   // absent for a brief-only job
-  "prompt": "…" }   // written by the console: the brief (if any), the import facts, the entry's path/URL/required keys
-```
-
-**Procedure** — replaces steps 3–4 above (claim, `running`, and the final status write are the same):
-
-1. **Check out the target branch.** `git fetch origin && git checkout <targetBranch>`. It's the console's fresh
-   draft (its PR is already open) — commit there; never re-route a content job to another branch. If the branch
-   is gone (the owner discarded the draft before you got here), set `failed` with
-   `--error "draft was discarded — nothing to write"` and stop.
-2. **Learn the collection.** Read `src/content.config.ts` (or `src/content/config.ts`) for the collection's
-   schema, then open one or two **sibling entries** in `entry.dir` — they show the frontmatter keys actually
-   used, the date format, how images are referenced, and the body conventions (MD vs MDX, components, callouts).
-3. **Make sure the file exists with valid frontmatter.**
-   - `entry.stub === true` → `entry.path` is already on the branch with valid frontmatter. Its body is a notice
-     block ("Importing from …" / "AI is drafting this") and, for an import, a plain-text first pass under a
-     `---` rule. **Replace the whole body.** Keep the frontmatter's `title`, `date` and `draft` exactly as the
-     console wrote them unless the brief says otherwise — the owner chose the title, and `draft: false` is
-     deliberate (the *branch* is the draft; publishing the branch is what makes it live).
-   - `entry.stub === false` → create `entry.path` yourself. Every key in `entry.required` must be present and
-     valid per the schema: copy a sibling's frontmatter shape and fill it honestly (a real category from the
-     enum, the `slug` from `entry.url`, today's date in the sibling's format, `draft: false` where the field
-     exists). Never invent a value you can't know (a required headshot, a `canonical` URL) — ask, or set `failed`
-     with `--error "<field> is required for a <Type> — tell me <what to provide>"`.
-4. **Get the source (imports only).** Pull the snapshot the console took when the job was created:
-
-   ```bash
-   node .blinkpages/queue.mjs pull-source --job <id> --dest .precision-source
-   ```
-
-   It writes `.precision-source/<id>.html` (or `.txt`) and prints `importSource.warning`. `null` → the snapshot
-   *is* the document; convert it. Any other value means the snapshot is not trustworthy — fetch the link
-   yourself (`importSource.url`, or `finalUrl`):
-   - `not-public` — a Google Doc that isn't shared **"Anyone with the link"**; the snapshot is a sign-in page.
-     If you can't reach it either, set `failed` with
-     `--error "the Google Doc isn't shared publicly — set Share → Anyone with the link → Viewer, then re-create the post"`.
-     That text is what the requester reads on the in-page card.
-   - `shell-only` — a Claude artifact whose HTML is an app shell with no content in it. Open the URL in a
-     browser-capable tool (a headless browser or a fetch tool that renders JavaScript) and read the rendered page.
-   - `not-html` — the link returned something other than HTML (a PDF, a JSON API, …). Open it yourself and
-     convert whatever it actually is; if you can't read it, `failed` with an error naming the type.
-   - `too-large` — the snapshot was cut at 2 MB. Fetch the full document yourself.
-   - `timeout` — the fetch didn't finish in 10 s; the snapshot may be empty or partial. Fetch it yourself.
-
-   Then **convert** it to the collection's conventions per
-   `.claude/blinkpages-editing.md` → **Importing a document into a content entry** —
-   headings, links, lists, tables, footnotes — and **download every image into the site's media convention**
-   (look at how siblings reference images, e.g. files under `public/assets/media/blog/<slug>/` referenced as
-   `/assets/media/blog/<slug>/<name>.png`). **Never leave a `googleusercontent.com`, `docs.google.com`,
-   `claude.ai` or other remote image URL in the entry** — those links expire or 403 for visitors.
-   Before you download anything, run `node .blinkpages/queue.mjs media --q <term>` (§3, **Images**) — the
-   site may already have the picture, including in the media bucket where `ls` cannot see it.
-5. **Draft the body (when the prompt carries a brief).** Write it in the site's voice: read `reference/`
-   (voice-and-tone, about-the-company, customers-and-personas), the site's design spec (`DESIGN.md` at the repo
-   root) and its design-system page (`src/pages/design-system.astro`; `style-library.astro` on older sites; some
-   keep a `brand.astro`), and match the
-   length, heading rhythm and tone of the best sibling entries. Brief **and** import → convert first, then apply
-   the brief to the converted text (restructure, tighten, add what's asked) rather than writing from scratch.
-6. **Validate.** `npm run build` (or `npx astro check`, when the site has it) must pass — a schema error here
-   means the frontmatter is wrong; fix the entry, never loosen the schema. Confirm the entry was emitted at
-   `entry.url` under `dist/`.
-7. **Commit and push, then report.** One commit, the entry plus the images you added:
-
-   ```bash
-   git add <entry.path> <public/… images you added>
-   git commit -m 'blinkpages-ai: import "<title>"'     # or: blinkpages-ai: create "<title>"
-   git push
-   node .blinkpages/queue.mjs set --job <id> --status done --commit "$(git rev-parse HEAD)" --claim-token <claimToken>
-   ```
-
-   The draft's preview rebuilds and the owner lands on the new page. **Don't publish** — the branch is the
-   draft; the owner reviews it and hits Publish.
-
-**When it doesn't work out**, `set --job <id> --status failed --error "<message>"`. The `error` is shown to the
-requester on the in-page card, so write it for *them* — what happened and what to do next:
-- source unreachable → `"the Google Doc isn't shared publicly — set Share → Anyone with the link → Viewer, then re-create the post"`,
-  or `"couldn't read <url> (<what happened>) — paste the text into the brief instead"`;
-- a required field only the owner can supply → `"<field> is required for a <Type> — tell me <what to provide>"`;
-- the draft is gone → `"draft was discarded — nothing to write"`;
-- the brief needs an image that doesn't exist → `"needs a real image — please upload one"` (never fabricate one).
+- Commit on `targetBranch`; gone → `failed --error "draft was discarded — nothing to write"`.
+- Copy a sibling entry's frontmatter; never loosen the schema; keep the console's `title`, `date` and `draft`.
+- Imports: `node .blinkpages/queue.mjs pull-source --job <id> --dest .precision-source`; any
+  `importSource.warning` → fetch the link yourself.
+- Download every image into the site's media folder; never leave a remote image URL in the entry.
+- The site must build before `done`. Never publish.

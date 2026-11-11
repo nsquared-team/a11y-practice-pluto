@@ -186,6 +186,10 @@ not start a new one. Its preview refreshes when you push — run `node .blinkpag
 send the link again, or the owner sees the previous version. Only start a new draft when the request is about
 the live site.
 
+**A draft carrying `.blinkpages/questions/*.md` is a queued job waiting on the owner's decisions.** Read that
+file first, settle each question with the owner, finish the change, delete the file in the same commit, push,
+run `node .blinkpages/wait-deploy.mjs <branch>` and hand over the preview link.
+
 ## What the owner means
 
 Owners speak in *site* words. Each one maps to a single mechanic; the editor's own button is in quotes:
@@ -204,9 +208,12 @@ Owners speak in *site* words. Each one maps to a single mechanic; the editor's o
 
 ## Working the queue
 
-The long form of this section — including the content-job procedure — is the `blinkpages` skill at
-`.agents/skills/blinkpages/SKILL.md` (`$blinkpages` in Codex). Use whichever your tool has loaded; they do the
-same thing.
+The long form of this section is the `blinkpages` skill at `.agents/skills/blinkpages/SKILL.md` (`$blinkpages`
+in Codex), with the content-job procedure in `content-jobs.md` beside it. Use whichever your tool has loaded;
+they do the same thing.
+
+Working the queue never stops to ask: take a reasonable, easily reversed reading and note it, or strand the
+job per the skill's **Strand a job**.
 
 The owner can ask for a change from inside their own site — the in-page **"Edit with AI"** card, and the
 admin console's **"New <type> with AI"** and import-from-a-link buttons. Those requests go into this site's
@@ -220,8 +227,7 @@ and never to a BlinkPages secret.
 ### If you cannot reach the network
 
 This is the normal case in ChatGPT/Codex cloud, where the working phase runs offline. **You cannot read the
-queue.** Say so plainly and ask the owner to paste the text of the request they queued — then treat it as an
-ordinary change and deliver it as a draft (Route B above).
+queue.** Say so plainly and stop; the owner can still ask for the change directly.
 
 Never report the queue as empty when you were unable to reach it. "There's nothing waiting" and "I couldn't
 look" are different answers, and only one of them is true.
@@ -237,7 +243,7 @@ node .blinkpages/queue.mjs list
 
 It prints a link; the **owner** opens it, checks the code matches and clicks **Approve** (nothing to copy back).
 The login lasts **24 hours**, so a daily prompt is normal. The command then lists what's pending. If it reports that this site has no queue
-endpoints yet, stop and use the paste-the-request route above.
+endpoints yet, say so and stop.
 
 **2. Take one job.** Each row has an id:
 

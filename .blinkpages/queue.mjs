@@ -334,7 +334,7 @@ if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.me
       process.exit(0); // the editor ladder is days behind a managed-skills push; not an error
     }
     if (e && e.code === "QUEUE_UNAVAILABLE") {
-      process.stderr.write("This site's worker doesn't have the queue endpoints yet — falling back to interactive mode (paste the prompt).\n");
+      process.stderr.write("This site's worker doesn't have the queue endpoints yet — nothing to drain here.\n");
       process.exit(0); // graceful Phase-1 fallback, not an error
     }
     process.stderr.write(String((e && e.message) || e) + "\n");
