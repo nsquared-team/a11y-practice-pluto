@@ -93,7 +93,8 @@ a BlinkPages setting) is `failed`, saying what to do instead.
    `ls` misses bucket-only files, which have no local copy:
    reference them by their `/assets/media/…` path, never `import` one. **Never commit `.precision-images/` or
    `.precision-source/`.** A queued "give me three versions" builds sibling drafts (the methodology's
-   **Multiple options**) and reports `done` once, on this job, with the first option's commit.
+   **Multiple options**) and reports `done` once, on this job, with the first option's commit. A form job
+   follows `.claude/blinkpages-forms.md`: a BlinkForm unless the owner named a vendor.
 6. **Push and report.**
 
    ```bash
