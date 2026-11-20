@@ -352,8 +352,9 @@ invent a taxonomy value. `slug` stays what the console chose — it's the addres
   monospace paragraph — recognise it by the font and convert it.
 - **Callouts / notes / quotes** — `>` blockquotes, or the site's own callout component when the siblings use
   one (MDX). Don't introduce a component the collection doesn't already use.
-- **Embeds** (YouTube, tweets, forms) — keep the URL as a link, or use the site's existing embed component;
-  never paste raw `<iframe>` markup from the source.
+- **Embeds** (YouTube, tweets) — keep the URL as a link, or use the site's existing embed component;
+  never paste raw `<iframe>` markup from the source. A **form** becomes a BlinkForm unless it is a named
+  vendor's embed (HubSpot, Mailchimp, a booking widget…): see `.claude/blinkpages-forms.md`.
 - **Cruft** — drop comments, suggestions, revision markers, page numbers, running headers/footers, "Table of
   contents" blocks, trailing empty paragraphs, and the "Importing from …" / "AI is drafting this" notice the
   console left in the stub. Keep every substantive sentence — conversion is not editing; rewrite only where the

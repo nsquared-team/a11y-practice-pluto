@@ -94,6 +94,14 @@ The essentials:
   `public/`). One logical concern per commit; messages like `blinkpages-ai: <what changed>`.
 - **Images:** edit / replace / crop / restyle existing imagery only — never fabricate a new photo. If a new
   image is genuinely needed, stop and ask for an upload.
+- **Forms are BlinkForms by default.** Any request for a form (contact, quote, signup, application, "get in
+  touch") is a native **BlinkForm**: a definition in `src/forms/<slug>.json` plus the form's markup. The
+  platform records, emails and lists every submission in the site console. Don't ask which kind they want, never
+  hand-write a form route, and never pick a form service the owner didn't name. Keep a vendor's form only when
+  the owner names or pastes one (HubSpot, GoHighLevel, Mailchimp, Typeform, a booking widget…). When they want
+  an embedded form styled beyond what the vendor allows, offer in one plain sentence to rebuild it as a native
+  form that still sends each lead to their CRM. **Read [`.claude/blinkpages-forms.md`](blinkpages-forms.md)
+  before writing or changing any form.**
 
 - **"Make this section private" is a platform setting, not a code change.** BlinkPages can gate a URL prefix
   — everything under `/reference`, say, including its subpages — to a named view audience: exact email
@@ -109,8 +117,8 @@ The essentials:
 ## Using the owner's BlinkMetrics connections from this site — Gatekeeper
 
 The owner's BlinkMetrics workspace already holds connections to the tools their business runs on — an
-email service such as Postmark or MailerLite, a project tool, a CRM. A site route that needs one of those
-(a contact form that sends an email, a signup that adds a subscriber) does **not** need that service's own
+email service such as Postmark or MailerLite, a project tool, a CRM. Site code that needs one of those
+(a form handler that adds each lead to the owner's CRM or mailing list) does **not** need that service's own
 API key. It uses a **Gatekeeper key**: a key the owner creates in BlinkMetrics that lets this site call
 that one connection, with only the permissions the owner chose, until the owner revokes it. The service's
 real credential stays inside BlinkMetrics, and every call the site makes is listed on that connection's
@@ -148,40 +156,38 @@ key with `401`.
    bracket access, because a name that starts with a digit cannot follow a dot. One site can hold
    several keys, for one connection or for several connections of the same service. Never paste the
    key into this repository, an issue or a pull request.
-4. **You write the route** in `src/blink-routes.js` — one exact path per handler, deployed with the site.
-   This one sends a contact form through the owner's Postmark connection:
+4. **You write the code** in `src/blink-routes.js`, deployed with the site. For a form, that is a
+   **BlinkForms handler**. The form itself is a BlinkForm ([`.claude/blinkpages-forms.md`](blinkpages-forms.md)),
+   and this function runs on the server after each submission is recorded. This one adds the person to the
+   owner's MailerLite list:
 
    ```js
    // src/blink-routes.js
-   export default {
-     "/api/contact": async (request, env) => {
-       if (request.method !== "POST") return new Response("Method not allowed", { status: 405 });
-       const form = await request.formData();
-       const sent = await fetch("https://gatekeeper.blinkmetrics.com/email", {
+   export const formHandlers = {
+     mailerlite: async (submission, env) => {
+       const res = await fetch("https://gatekeeper.blinkmetrics.com/api/subscribers", {
          method: "POST",
          headers: {
-           Authorization: `Bearer ${env["123_GATEKEEPER_POSTMARK_KEY_CXN_456"]}`,
+           Authorization: `Bearer ${env["123_GATEKEEPER_MAILERLITE_KEY_CXN_456"]}`,
            "Content-Type": "application/json",
          },
-         body: JSON.stringify({
-           From: "hello@example.com", // a sender the owner's Postmark account may send as
-           To: "owner@example.com",
-           Subject: `Website message from ${form.get("name")}`,
-           TextBody: form.get("message"),
-         }),
+         body: JSON.stringify({ email: submission.data.email, fields: { name: submission.data.name } }),
        });
-       return sent.ok
-         ? new Response("Thanks — we got your message.")
-         : new Response("Could not send right now, please try again later.", { status: 502 });
+       if (!res.ok) return { ok: false, error: `MailerLite answered ${res.status}` };
      },
    };
    ```
 
-   The path and body are exactly what Postmark documents for sending an email; only the host and the
-   bearer differ. Any other connection works the same way, with that service's own path and body.
+   The form's definition points at it with a feed, `{ "id": 1, "addon_slug": "code", "is_active": true,
+   "meta": { "feedName": "Add to MailerLite", "handler": "mailerlite" } }`. The path and body are exactly
+   what MailerLite documents for adding a subscriber; only the host and the bearer differ. Any other
+   connection works the same way, with that service's own path and body. Code that isn't about a form
+   (an address the page itself calls) is a route instead: `export default { "/api/<path>": async (request,
+   env) => … }`, one exact path per handler. **A contact form is never a hand-written route.**
 
 **Keeping the key safe.**
 - The key lives only in the Worker secret. Never in `src/`, `public/`, a page, a commit or a URL.
 - Call the relay from the route, never from the browser — a key in page code is a key anyone can copy.
-- Until the BlinkPages team has switched tenant routes on, the file is ignored and the path answers the
-  site's 404 page; the deploy log says which of the two it did.
+- Until the BlinkPages team has switched tenant routes on, the file is ignored: a route's path answers the
+  site's 404 page, and a form handler shows as *Won't run* in the console (the form's submissions are still
+  recorded and emailed). The deploy log says which of the two it did.

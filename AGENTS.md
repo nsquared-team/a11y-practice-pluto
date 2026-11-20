@@ -57,6 +57,9 @@ waiting?”** — that is a specific thing with its own steps: see **Working the
   design-system page. Asked for something off-brand: do it, say so in one plain sentence, and offer to add it to
   their design system. Change a value in `tokens.css` and `DESIGN.md` together. Keep technical words
   (component, prop, variant, token, CSS) out of what you tell the owner unless they ask.
+- **Forms are BlinkForms by default** (`src/forms/<slug>.json` + markup; never a hand-written route). Use a
+  vendor's form only when the owner names or pastes one; asked to restyle it, offer a native rebuild that still
+  feeds their CRM. Read `.claude/blinkpages-forms.md` first.
 - **"Make this page private" is not something you can build.** Restricting who may *view* a page is a
   BlinkPages account setting, not a code change, and it cannot be shipped from this repository. Never
   substitute a password page, a hidden/unlisted URL, a `noindex` tag, or a JavaScript "login" — none of those
