@@ -29,7 +29,7 @@ import '../styles/global.css';
       <h1>Welcome to Discover Pluto</h1>
       <p class="hero-tagline">Your guide to the Solar System's most famous dwarf planet.</p>
       <!-- Hero image deliberately missing alt -->
-      <img src="/images/pluto-true-color.jpg" width="360" class="content-img" />
+      <img src="/images/pluto-true-color.webp" width="360" class="content-img" fetchpriority="high" height="360" srcset="/images/pluto-true-color-360w.webp 360w, /images/pluto-true-color-720w.webp 720w, /images/pluto-true-color.webp 1026w" sizes="(max-width: 579px) 90vw, 360px" />
     </div>
 
     <div class="page-body" style="max-width:820px;margin:0 auto;padding:2rem 1.5rem;">
@@ -64,7 +64,7 @@ import '../styles/global.css';
            is the link's only content, so the link has no accessible name
            (link-name). Empty alt keeps this from also firing image-alt. -->
       <p>Featured topic:
-        <a href="/orbit"><img src="/images/pluto-blue-haze.jpg" width="120" alt="" /></a>
+        <a href="/orbit"><img src="/images/pluto-blue-haze.webp" width="120" alt="" loading="lazy" decoding="async" srcset="/images/pluto-blue-haze-240w.webp 240w, /images/pluto-blue-haze-368w.webp 368w, /images/pluto-blue-haze.webp 1040w" sizes="123px" /></a>
       </p>
     </div>
 

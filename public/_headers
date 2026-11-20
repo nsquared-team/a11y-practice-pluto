@@ -1,0 +1,59 @@
+# Cache policy for static assets.
+#
+# Cloudflare Workers Static Assets reads this file, the same way it reads
+# _redirects. It survives the platform's deploy re-stamp of src/worker.js, which
+# is why cache policy lives HERE and not in the Worker. Without it,
+# Workers serve every asset with `max-age=0, must-revalidate`, so each repeat
+# visit re-validates every stylesheet, script, font and image (Lighthouse:
+# uses-long-cache-ttl / cache-insight).
+#
+# `immutable` ONLY for content-addressed names — a hash in the filename, so a
+# change is a new URL and a stale cache is impossible:
+/_astro/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/assets/site/bundle-*
+  Cache-Control: public, max-age=31536000, immutable
+
+/assets/site/base-*
+  Cache-Control: public, max-age=31536000, immutable
+
+# NOT content-addressed (a re-upload or re-subset reuses the name): a week fresh,
+# a month stale-while-revalidate — changes land within a week, nothing blocks.
+/images/*
+  Cache-Control: public, max-age=604800, stale-while-revalidate=2592000
+
+/assets/fonts/*
+  Cache-Control: public, max-age=604800, stale-while-revalidate=2592000
+
+/assets/opt/*
+  Cache-Control: public, max-age=604800, stale-while-revalidate=2592000
+
+/assets/themes/*
+  Cache-Control: public, max-age=604800, stale-while-revalidate=2592000
+
+/assets/plugins/*
+  Cache-Control: public, max-age=604800, stale-while-revalidate=2592000
+
+/assets/core/*
+  Cache-Control: public, max-age=604800, stale-while-revalidate=2592000
+
+/assets/ext/*
+  Cache-Control: public, max-age=604800, stale-while-revalidate=2592000
+
+# Media from the R2 bucket is served by the Worker, which sets its own headers;
+# this rule only applies where media ships as a static asset.
+/assets/media/*
+  Cache-Control: public, max-age=604800, stale-while-revalidate=2592000
+
+# The design system page (/design-system/, with its story pages) is internal: the platform gates it
+# behind an editor login (tenants/<id>.json adminRoutePrefixes), and an edge-cached copy would be
+# served without the Worker — so it is never cached, and never indexed even on an indexable
+# production host.
+/design-system
+  Cache-Control: private, no-store
+  X-Robots-Tag: noindex, nofollow
+
+/design-system/*
+  Cache-Control: private, no-store
+  X-Robots-Tag: noindex, nofollow
