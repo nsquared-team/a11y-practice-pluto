@@ -131,9 +131,9 @@ gradient with the title, a one-line welcome and a portrait of Pluto.
 
 The site has a second job. It is a fixed practice target for automated accessibility scanners, so
 its pages carry a known set of deliberate accessibility failures: images without descriptions,
-skipped heading levels, text too faint to read, unlabeled form fields, invalid menu markup and a few
-more. They are test fixtures, not design. Each is listed in the site's issues list, and none changes
-unless that list changes with it. Changing the look is the owner's call.
+skipped heading levels, text too faint to read, invalid menu markup, a scrolling marquee, an untitled
+video frame and a few more. They are test fixtures, not design. Each is listed in the site's issues
+list, and none changes unless that list changes with it. Changing the look is the owner's call.
 
 ## Logo
 
@@ -232,7 +232,7 @@ gradient.
 - Do set links in link blue and underlined, other text in ink on white, and white on the night-sky
   bands.
 - Don't use the three fixture colors, or copy any of the deliberate failures, in new content.
-- Don't "fix" a deliberate failure on an existing page: each is a test fixture, and the issues list
-  has to change with it.
+- Don't repair a deliberate failure on an existing page: each is a test fixture, and the issues
+  list has to change with it.
 - Don't add a web font or a second accent color without the owner: the brand is the reader's own
   system face and one violet.
