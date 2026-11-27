@@ -1,3 +1,8 @@
+/* Design tokens. All eight were chosen by hand in the site's first build (1892286, PR #1,
+   2026-06-18), in the :root block of src/styles/global.css, with no source site to measure them from.
+   They moved here unchanged on 2026-11-27 (dfb1421); global.css imports this file.
+   A comment here says only where a value came from. What each one is for is said once, in DESIGN.md,
+   and /design-system/ shows it. */
 :root {
   --space-black: #0b0c1a;
   --space-deep: #14162b;
