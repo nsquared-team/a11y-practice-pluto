@@ -5,16 +5,7 @@
    failures used by content pages — see ISSUES.md.
    ============================================================ */
 
-:root {
-  --space-black: #0b0c1a;
-  --space-deep: #14162b;
-  --space-panel: #1d2040;
-  --ink: #1a1a1a;
-  --paper: #ffffff;
-  --accent: #6b4fd6;
-  --accent-ink: #2f1f73;
-  --link: #1a4fd6;
-}
+@import "./tokens.css";
 
 * {
   box-sizing: border-box;
