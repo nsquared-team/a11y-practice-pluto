@@ -1,0 +1,1864 @@
+---
+// design-system template: 60a48fe
+//   (the blinkpages-migrate commit this page was copied or last updated from; whoever copies or
+//   updates the page writes it here, so the next update 3-way merges from the right base)
+// /design-system — the site's brand book and design system, ONE document (style-library.md §3).
+//
+// DESIGN.md (repo root, Google's design.md format) is the spec: tokens, roles, intent, do's and don'ts.
+// This page sets it out for a person, as one book in DESIGN.md's own order (the person's choice,
+// 2026-11-02: one place for each thing, for designers and agents alike):
+//   cover and Overview · 01 Logo & icon · 02 Color · 03 Typography · 04 Layout · 05 Depth & shape ·
+//   06 Components (the Storybook-style explorer) · 07 Do's & don'ts.
+// Each chapter opens with DESIGN.md's own prose for it, verbatim, then shows it once: swatches, the
+// pairs in use, the hierarchy and specimens, the drawn grid, the corners, the components. A
+// collapsed "For developers" strip at a chapter's foot gives its tokens and classes; the APPENDIX
+// lists what the explorer leaves out, every token and every global class.
+// Nothing here writes new copy, and nothing renders a page's real copy.
+//
+// Internal: noindexed here, kept out of the sitemap (astro.config.mjs), and login-gated on the
+// platform (the fleet default adminRoutePrefixes lists /design-system; a tenant's own list must too).
+//
+// GENERATED parts read tokens.css, global.css, DESIGN.md and the explorer's stories at build time,
+// so don't hand-edit them. DESIGN.md is checked against tokens.css by drift.mjs beside this page: the
+// gate's own check (scripts/lib/design-drift.mjs), copied by the scaffold, never edited here.
+// The CURATED parts (the sl:logos,
+// sl:typography, sl:layout, sl:elevation, sl:shapes and sl:components slots, slOmit, and the stories in
+// src/components/design-system/stories.ts) belong to the style-library agent
+// (oneshot/briefs/style-library.md). Each marker shows the markup to use.
+//
+// gate-style-library.mjs fails the run when DESIGN.md is missing or disagrees with tokens.css, when a
+// token or global class is missing here (or from the story pages), or when a component a native page
+// imports has no story and no slOmit reason.
+//
+// This page and its story pages build in a pass of their own (src/integrations/design-system.mjs,
+// registered in astro.config.mjs): the site's own build sees them as empty stubs, so what they import
+// never changes a real page's CSS (style-library.md §3). The page says so in
+// <meta name="design-system-build" content="pass">, which the gate checks.
+import fs from "node:fs";
+import path from "node:path";
+// @ts-ignore: the integration declares it, but a tsconfig that excludes .astro/ hides the declaration
+import { built } from "virtual:design-system/build";
+/* tokens.css and global.css are set inline in <head> (?inline: Vite's processed text, url()s and
+   @imports resolved), never imported as CSS modules. Imported, they became a chunk the separate pass
+   shared with the story route, and on story pages it landed after the layout's later sheets, so
+   global.css's older rules beat the live look (noonanelectricalservices.com, andrewpickettlaw.com,
+   855mikewins.com, 2026-11-04) */
+import tokensInline from "../styles/tokens.css?inline";
+import globalInline from "../styles/global.css?inline";
+/* an @import must open its sheet, so one in global.css (a Google Fonts url()) was ignored once the
+   inlined text followed tokens.css (syntropymarketing.com's Manrope, Roboto, Space Mono, Figtree fell
+   back to system faces). External imports become <link>s in <head>, ahead of the inlined text */
+const importRe = /@import\s+(?:url\(\s*)?["']?(https?:\/\/[^"')\s]+)["']?\s*\)?[^;]*;/g;
+const cssImports = [...new Set([...`${tokensInline}\n${globalInline}`.matchAll(importRe)].map((m) => m[1]))];
+const siteInline = `${tokensInline}\n${globalInline}`.replace(importRe, "");
+/* the site's self-hosted fonts, when it has a fonts sheet: the brand book is set in them */
+import.meta.glob("../styles/**/fonts*.css", { eager: true });
+import tokensCss from "../styles/tokens.css?raw";
+import { designDrift, tokenNames, tokenOf } from "../components/design-system/drift.mjs";
+import globalCss from "../styles/global.css?raw";
+/* curated imports go here (this page builds apart from the real pages, so an import changes none of them) */
+
+/* Components a native page imports that the explorer does not show, each with the reason
+   (gate-style-library.mjs reads this object): one that only opens from another ("opens from a project
+   card: open one in the Projects story"), or one that must not run even alone ("posts on load").
+   Shown in the appendix as "Not in the explorer". */
+const slOmit: Record<string, string> = {};
+
+/* Older pages only: the Blocks appendix's card groups, [id, label]. A new page leaves this empty, as
+   its blocks are stories (stories.ts), and the Blocks appendix then does not render. */
+const slBlockGroups: [string, string][] = [];
+
+/* DESIGN.md, if the site has one yet (a glob, so a site without it still builds) */
+const designSrc = Object.values(import.meta.glob<string>("/DESIGN.md", { query: "?raw", import: "default", eager: true }))[0] ?? "";
+
+const stripComments = (css: string) => css.replace(/\/\*[\s\S]*?\*\//g, "");
+
+/* every `--name: value` (first value wins), in source order */
+function tokensOf(css: string) {
+  const out = new Map<string, string>();
+  for (const m of stripComments(css).matchAll(/(--[A-Za-z0-9_-]+)\s*:\s*([^;{}]+);/g)) {
+    if (!out.has(m[1])) out.set(m[1], m[2].trim());
+  }
+  return [...out].map(([name, value]) => ({ name, value }));
+}
+
+/* every class named in a selector (at-rule preludes skipped), in source order */
+function classesOf(css: string) {
+  const out = new Set<string>();
+  for (const m of stripComments(css).matchAll(/([^{}]+)\{/g)) {
+    const sel = m[1].trim();
+    if (!sel || sel.startsWith("@")) continue;
+    for (const c of sel.replace(/\[[^\]]*\]/g, "").matchAll(/\.(-?[A-Za-z_][A-Za-z0-9_-]*)/g)) out.add(c[1]);
+  }
+  return [...out];
+}
+
+type Kind = "color" | "gradient" | "font" | "size" | "weight" | "leading" | "tracking" | "space" | "radius" | "shadow" | "other";
+const COLOR_VALUE = /^(#|rgba?\(|hsla?\(|oklch\(|oklab\(|lab\(|lch\(|color-mix\(|color\()/i;
+const HSL_TRIPLET = /^-?[\d.]+\s*,\s*[\d.]+%\s*,\s*[\d.]+%$/;
+function kindOf({ name, value }: { name: string; value: string }): Kind {
+  const n = name.toLowerCase();
+  /* before color: a --hero-bg gradient is painted, never filed under "other" or read as a palette color */
+  if (/gradient\(/i.test(value) || (/gradient/.test(n) && /^var\(/i.test(value))) return "gradient";
+  if (COLOR_VALUE.test(value) || HSL_TRIPLET.test(value) || /colou?r|-bg\b|background|-fg\b|-ink\b|-surface/.test(n)) return "color";
+  /* a family is a stack, never a number or length: advisorevolved.com's --font-scale-responsive: 0.15vw
+     and a fleet site's --font-primary-line-height: 120% were filed as families; ninebark's and
+     raytrammell's --f-display, a quoted stack, as a size */
+  const lengthy = /^-?[\d.]+[a-z%]*$/i.test(value.trim());
+  if (!lengthy && !/^--font-scale/.test(n) && (/font-family|-font$|^--font(?!-size|-weight|-scale)|family/.test(n) || (/^--f-/.test(n) && /["',]/.test(value)))) return "font";
+  if (/weight/.test(n)) return "weight";
+  /* before size: --tracking-display / --tracking-h2 name a type tier but are letter-spacing */
+  if (/tracking|letter-spacing|kerning/.test(n)) return "tracking";
+  if (/leading|line-height|lh\b/.test(n)) return "leading";
+  if (/shadow|^--sh-/.test(n)) return "shadow";
+  if (/radius|rounded/.test(n)) return "radius";
+  if (/text|font-size|fs-|size|display|heading|h[1-6]\b/.test(n)) return "size";
+  if (/space|gap|pad|margin|gutter|width|max|inset|offset|height/.test(n)) return "space";
+  return "other";
+}
+/* a Squarespace-style `--x-hsl: h,s%,l%` triplet is drawn as hsl(var(--x)) */
+const paint = (t: { name: string; value: string }) => (HSL_TRIPLET.test(t.value) ? `hsl(var(${t.name}))` : `var(${t.name})`);
+
+/* ---- DESIGN.md: the YAML front matter subset its template uses (nested maps, `key: value  # note`) ---- */
+type Scalar = { value: string; comment?: string };
+type YamlMap = Map<string, YamlMap | Scalar>;
+const isMap = (v: unknown): v is YamlMap => v instanceof Map;
+function parseFrontMatter(src: string): YamlMap {
+  const root: YamlMap = new Map();
+  const stack: { indent: number; node: YamlMap }[] = [{ indent: -1, node: root }];
+  for (const line of (src.match(/^---\r?\n([\s\S]*?)\r?\n---/)?.[1] ?? "").split(/\r?\n/)) {
+    const m = line.trim().match(/^([\w.-]+):\s*(.*)$/);
+    if (!m || line.trim().startsWith("#")) continue;
+    const indent = line.length - line.trimStart().length;
+    while (stack.length > 1 && indent <= stack[stack.length - 1].indent) stack.pop();
+    const parent = stack[stack.length - 1].node;
+    const [, key, rest] = m;
+    if (!rest || rest.startsWith("#")) {
+      const child: YamlMap = new Map();
+      parent.set(key, child);
+      stack.push({ indent, node: child });
+      continue;
+    }
+    const q = rest.match(/^"((?:[^"\\]|\\.)*)"\s*(?:#\s*(.*))?$/) ?? rest.match(/^'([^']*)'\s*(?:#\s*(.*))?$/);
+    const hash = rest.search(/\s#/);
+    parent.set(key, q ? { value: q[1], comment: q[2]?.trim() } : hash === -1 ? { value: rest.trim() } : { value: rest.slice(0, hash).trim(), comment: rest.slice(hash).replace(/^\s#\s*/, "").trim() });
+  }
+  return root;
+}
+const scalars = (root: YamlMap, key: string) => [...((root.get(key) as YamlMap | undefined) ?? new Map())].filter((e): e is [string, Scalar] => !isMap(e[1]));
+const groupsOf = (root: YamlMap, key: string) =>
+  [...((root.get(key) as YamlMap | undefined) ?? new Map())]
+    .filter((e): e is [string, YamlMap] => isMap(e[1]))
+    .map(([n, m]) => [n, Object.fromEntries([...m].filter((p): p is [string, Scalar] => !isMap(p[1])).map(([k, v]) => [k, v.value]))] as [string, Record<string, string>]);
+const textOf = (root: YamlMap, key: string) => { const v = root.get(key); return v && !isMap(v) ? v.value : ""; };
+const norm = (v?: string) => (v ?? "").toLowerCase().replace(/\s+/g, "").replace(/^#([0-9a-f])([0-9a-f])([0-9a-f])$/, "#$1$1$2$2$3$3");
+const resolveRef = (root: YamlMap, ref?: string) => {
+  const m = ref?.match(/^\{(\w+)\.([\w-]+)\}$/);
+  if (!m) return ref;
+  const v = (root.get(m[1]) as YamlMap | undefined)?.get(m[2]);
+  return v && !isMap(v) ? v.value : undefined;
+};
+function contrast(fg: string, bg: string) {
+  const rgb = (c: string) => {
+    const m = c.match(/rgba?\(\s*([\d.]+)[ ,]+([\d.]+)[ ,]+([\d.]+)/);
+    if (m) return [+m[1], +m[2], +m[3]];
+    const h = norm(c).replace("#", "");
+    return [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16));
+  };
+  const lum = (c: number[]) => {
+    const [r, g, b] = c.map((x) => { const s = x / 255; return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4; });
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  };
+  const [a, b] = [lum(rgb(fg)), lum(rgb(bg))];
+  return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+}
+
+const tokens = tokensOf(tokensCss);
+const live = new Map(tokens.map((t) => [t.name, t.value]));
+/* a token and its value, for a curated caption: {tok("--color-rule")} reads tokens.css at build, so a
+   caption never retypes a value that could then go stale */
+const tok = (name: string) => `${name} · ${live.get(name) ?? "not in tokens.css"}`;
+const design = parseFrontMatter(designSrc);
+const designColors = scalars(design, "colors");
+/* a DESIGN.md comment without its leading token (`= --color-ink. Body text` reads "Body text") */
+const noteOf = (comment?: string) => (comment ?? "").replace(/^=?\s*--[\w-]+\.?\s*/, "");
+/* each color token's DESIGN.md note and the role names that alias it (primary), for the token reference */
+const role = new Map<string, string[]>();
+for (const [n, e] of designColors) {
+  const prop = tokenOf(live, "colors", n, e);
+  if (!prop) continue;
+  const named = tokenOf(live, "colors", n, { comment: e.comment }) === prop;
+  role.set(prop, [...(role.get(prop) ?? []), named ? noteOf(e.comment) : n].filter(Boolean));
+}
+const typeLevels = groupsOf(design, "typography");
+/* where DESIGN.md and tokens.css disagree: drift.mjs, the gate's own check (every color, radius, spacing
+   and typography field), so the alert and the gate can never tell two stories */
+const { drift, undocumented } = designDrift(designSrc, tokensCss);
+/* the color a pair names: {colors.white} is "White" even when an earlier color shares its value
+   (evie.life, tylers.life, marlowstreet, stagingpilot, advisorevolved.com read "Page on …") */
+const refKey = (v: unknown) => (typeof v === "string" ? /^\{\s*colors\.([\w-]+)\s*\}$/.exec(v.trim())?.[1] : undefined);
+const pairs = groupsOf(design, "components")
+  .map(([n, p]) => ({ n, bg: resolveRef(design, p.backgroundColor), fg: resolveRef(design, p.textColor), bgKey: refKey(p.backgroundColor), fgKey: refKey(p.textColor) }))
+  .filter((p): p is { n: string; bg: string; fg: string; bgKey: string | undefined; fgKey: string | undefined } => !!p.bg && !!p.fg && !p.bg.startsWith("{") && !p.fg.startsWith("{"));
+const typeStyle = (p: Record<string, string>) => [["font-family", p.fontFamily], ["font-size", p.fontSize], ["font-weight", p.fontWeight], ["line-height", p.lineHeight], ["letter-spacing", p.letterSpacing]].filter(([, v]) => v).map(([k, v]) => `${k}:${v}`).join(";");
+const siteName = textOf(design, "name") || "Discover Pluto";
+
+const groups: [Kind, string][] = [
+  ["color", "Color"], ["gradient", "Gradients"], ["font", "Font families"], ["size", "Type sizes"], ["weight", "Font weights"],
+  ["leading", "Line heights"], ["tracking", "Letter spacing"], ["space", "Spacing & widths"], ["radius", "Radii"], ["shadow", "Shadows"], ["other", "Other tokens"],
+];
+const byKind = new Map(groups.map(([k]) => [k, tokens.filter((t) => kindOf(t) === k)]));
+
+const classes = classesOf(globalCss);
+const classSet = new Set(classes);
+/* a modifier renders with its base (`btn-primary` / `btn--ghost` with `btn`) */
+/* a class only ever written compounded with another (.btn.is-hover) renders with it */
+const partners = new Map<string, string>();
+for (const m of stripComments(globalCss).matchAll(/\.(-?[A-Za-z_][\w-]*)\.(-?[A-Za-z_][\w-]*)/g)) if (!partners.has(m[2])) partners.set(m[2], m[1]);
+const withBase = (c: string) => {
+  const base = classes.find((b) => b !== c && (c.startsWith(`${b}-`) || c.startsWith(`${b}_`)) && classSet.has(b));
+  const with_ = base ?? (partners.has(c) && classSet.has(partners.get(c)!) ? partners.get(c) : undefined);
+  return with_ ? `${with_} ${c}` : c;
+};
+const tagOf = (c: string) => (/btn|button|cta|link/i.test(c) ? "a" : "div");
+
+/* the spec's palette: DESIGN.md's colors (each painted from the token it maps to), else every color token */
+const palette = designSrc
+  ? designColors.map(([n, e]) => ({ name: n, value: e.value, prop: tokenOf(live, "colors", n, e), note: noteOf(e.comment) }))
+  : byKind.get("color")!.map((t) => ({ name: t.name, value: t.value, prop: t.name, note: "" }));
+const spec = (section: string, prefix: string, kind: Kind) =>
+  designSrc
+    ? scalars(design, section).map(([n, e]) => ({ name: `${section}.${n}`, value: e.value, prop: tokenOf(live, section, n, e) ?? prefix + n }))
+    : byKind.get(kind)!.map((t) => ({ name: t.name, value: t.value, prop: t.name }));
+/* the corners: DESIGN.md's rounded scale, else every radius token (a --button-radius has no rounded.x) */
+const roundedSpec = scalars(design, "rounded").length ? spec("rounded", "--radius-", "radius") : byKind.get("radius")!.map((t) => ({ name: t.name, value: t.value, prop: t.name }));
+const fonts = byKind.get("font")!;
+const shadows = byKind.get("shadow")!;
+/* ---- THE BRAND BOOK (the page's opening chapters, for a designer): everything below is read from
+   DESIGN.md and tokens.css, so a new site gets it with no hand-written content. Modelled on a
+   traditional brand book: a cover, then Color (story + glossary with HEX / RGB / CMYK), Pairing
+   (do's and don'ts computed from WCAG contrast), Typography (hierarchy + one specimen per family)
+   and Logo. ---- */
+const hexRgb = (hex: string) => { const h = norm(hex).replace("#", ""); return [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16)); };
+const cmyk = ([r, g, b]: number[]) => {
+  const [R, G, B] = [r / 255, g / 255, b / 255];
+  const k = 1 - Math.max(R, G, B);
+  if (k >= 1) return [0, 0, 0, 100];
+  return [(1 - R - k) / (1 - k), (1 - G - k) / (1 - k), (1 - B - k) / (1 - k), k].map((v) => Math.round(v * 100));
+};
+const lumOf = (hex: string) => { const [r, g, b] = hexRgb(hex).map((x) => { const s = x / 255; return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4; }); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+const titleCase = (s: string) => s.replace(/[-_]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+/* the brand colors: DESIGN.md's SOLID colors (#rrggbb), one per token they map to (drift.mjs's tokenOf,
+   the gate's own mapping), so two tokens that share a value stay two colors. A name with no token of
+   its own (a role: primary, accent) labels the color whose value it aliases, and a token's own name
+   takes the swatch (cascade-partners' "Primary · Primary · Accent", 2026-11-03). Translucent utilities
+   (rules, scrims) stay in the spec. */
+/* a token that only aliases another (`--color-primary: var(--color-accent)`) is that token's role, not
+   a color of its own: evgnagency showed its olive three times, and blank 1:1 tiles (2026-11-03) */
+const aliasTarget = (k: string) => { let t = k; for (let i = 0; i < 8; i++) { const m = /^var\(\s*(--[\w-]+)\s*\)$/.exec(live.get(t) ?? ""); if (!m || !live.has(m[1])) break; t = m[1]; } return t; };
+const brandColors = (() => {
+  const solid = designColors.filter(([, { value }]) => /^#[0-9a-f]{3}([0-9a-f]{3})?$/i.test(value.trim()));
+  const byToken = new Map<string, { name: string; hex: string; note: string; roles: string[]; rank: number }>();
+  for (const [n, e] of solid) {
+    const own = tokenOf(live, "colors", n, e);
+    const key = own ? aliasTarget(own) : norm(e.value);
+    /* who names the swatch: the token's own name (--color-sand's `sand`), then a name its comment maps
+       (`ocean  # = --teal`), then a role that only shares the value (`primary`) */
+    const rank = tokenNames("colors", n).includes(key) ? 2 : tokenOf(live, "colors", n, { comment: e.comment }) ? 1 : 0;
+    const c = byToken.get(key);
+    if (!c) byToken.set(key, { name: n, hex: norm(e.value), note: noteOf(e.comment), roles: [], rank });
+    else if (rank > c.rank) { c.roles.push(c.name); Object.assign(c, { name: n, note: noteOf(e.comment) || c.note, rank }); }
+    else c.roles.push(n);
+  }
+  return [...byToken.values()].map((c) => ({ ...c, rgb: hexRgb(c.hex), cmyk: cmyk(hexRgb(c.hex)), lum: lumOf(c.hex) }));
+})();
+/* the cover's dots: one per color a reader tells apart. Colors closer than ΔE 12 (CIE76, in Lab) read
+   as one at a glance (itspmagazine's two heading grays and four oranges, cascade-partners' 27 grays and
+   teals), so the first in DESIGN.md's order stands for the rest. The Color chapter still shows every
+   color (the person, 2026-11-03). */
+const labOf = (hex: string) => {
+  const [x, y, z] = (() => {
+    const [r, g, b] = hexRgb(hex).map((v) => { const s = v / 255; return s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4; });
+    return [(0.4124 * r + 0.3576 * g + 0.1805 * b) / 0.95047, 0.2126 * r + 0.7152 * g + 0.0722 * b, (0.0193 * r + 0.1192 * g + 0.9505 * b) / 1.08883];
+  })().map((t) => (t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116));
+  return [116 * y - 16, 500 * (x - y), 200 * (y - z)];
+};
+const looksSame = (a: string, b: string) => { const p = labOf(a), q = labOf(b); return Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]) < 12; };
+/* the page's own ground wins a near-tie: one fleet site's off-white page lost its dot to a rose tint
+   listed first (2026-11-11) */
+const isGround = (c: { name: string; roles: string[] }) => [c.name, ...c.roles].some((x) => /^(page|surface|background|bg|paper|canvas)$/.test(x));
+/* the dot that stands for a near-tie carries the names and roles of the colors it stands for, so a
+   primary that ties with the page color still leads the Brand row (evgnagency.com lost its olive) */
+const coverAlso = new Map<(typeof brandColors)[number], string[]>();
+const coverKeep = [...brandColors].sort((a, b) => Number(isGround(b)) - Number(isGround(a))).reduce<typeof brandColors>((keep, c) => {
+  const k = keep.find((x) => looksSame(x.hex, c.hex));
+  if (!k) return [...keep, c];
+  coverAlso.set(k, [...(coverAlso.get(k) ?? []), c.name, ...c.roles]);
+  return keep;
+}, []);
+const coverDots = brandColors.filter((c) => coverKeep.includes(c)).map((c) => ({ ...c, roles: [...c.roles, ...(coverAlso.get(c) ?? [])] }));
+const byLum = [...brandColors].sort((a, b) => a.lum - b.lum);
+/* the ink, the cover's and the specimens' ground: a dark brand color, never a utility. The brand's
+   `ink` if dark, else its primary if dark, else its most saturated dark color, else the darkest. The
+   darkest alone picked a #000 button label (evgnagency), and a color named `text` picked body-copy
+   gray over cascade-partners' navy (2026-11-03) */
+const chroma = (c: { rgb: number[] }) => (Math.max(...c.rgb) - Math.min(...c.rgb)) / 255;
+const dark = brandColors.filter((c) => c.lum < 0.18);
+const isNamed = (c: { name: string; roles: string[] }, n: RegExp) => [c.name, ...c.roles].some((x) => n.test(x));
+const inkColor = dark.find((c) => isNamed(c, /^(ink|dark)$/)) ?? dark.find((c) => isNamed(c, /^primary$/))
+  ?? [...dark].filter((c) => chroma(c) >= 0.12).sort((a, b) => chroma(b) - chroma(a))[0] ?? byLum[0];
+/* ...in rows, the colors that drive the brand first: its roles (primary, secondary, accent), then the
+   other hues, then pale tints, then neutrals. Seventeen dots in one run read as a rainbow, not a brand
+   (blinkpages.com, the person, 2026-11-04). In Lab: a color under C* 5, or named gray, muted or text
+   and under C* 12, is a neutral (go.mvmlaw.com's slate is C* 18, a hue); a pale (L* 88+), soft (C* under 30) one a tint; then a mid or light one under
+   C* 12 a neutral (tylers.life's #6b7280 is C* 8.6, blinkpages.com's pale sky 11.8). A dark navy
+   reads as color at C* 8 (go.hilley-solis.com's), a near-black under C* 7 does not (raytrammell's
+   ink, C* 5.5), and a role is a neutral only when it is a true gray (C* under 5). A brand with no role names leads with its first hue. */
+const lch = (hex: string) => { const [l, a, b] = labOf(hex); return { l, c: Math.hypot(a, b) }; };
+const coverRows = (() => {
+  const isRole = (c: (typeof coverDots)[number]) => isNamed(c, /^(primary|secondary|tertiary|accent|brand)$/);
+  const kind = (c: (typeof coverDots)[number]) => { const { l, c: k } = lch(c.hex); if (isGround(c) && !isRole(c) && k < 12) return "neutral"; if (k < 5 || (l < 30 && k < 7 && !isRole(c)) || (!isRole(c) && k < 12 && isNamed(c, /^(gr[ae]y|neutral|muted|text|stone|slate)(-\d+)?$/))) return "neutral"; return l >= 88 && k < 30 ? "tint" : k < 12 && l >= 30 && !isRole(c) ? "neutral" : "hue"; };
+  const roleRank = (c: (typeof coverDots)[number]) => Math.min(...["primary", "secondary", "tertiary", "accent", "brand"].map((r, i) => (isNamed(c, new RegExp(`^${r}$`)) ? i : 9)));
+  let brand = coverDots.filter((c) => isRole(c) && kind(c) !== "neutral").sort((a, b) => roleRank(a) - roleRank(b));
+  if (!brand.length) brand = coverDots.filter((c) => kind(c) === "hue").slice(0, 1);
+  const rest = coverDots.filter((c) => !brand.includes(c));
+  return ([["Brand", brand], ["Accent", rest.filter((c) => kind(c) === "hue")], ["Tint", rest.filter((c) => kind(c) === "tint")], ["Neutral", rest.filter((c) => kind(c) === "neutral")]] as [string, typeof coverDots][]).filter(([, cs]) => cs.length);
+})();
+const bbInk = inkColor?.hex ?? "#1a1a1a"; // the cover and the specimen grounds
+const bbPaper = byLum[byLum.length - 1]?.hex ?? "#ffffff"; // the lightest: the page
+/* the accent grounds half the chapter dividers under ink titles, so it must carry ink at 3:1: the
+   primary if it does, else the first brand color that does, short of near-white (superbloomtalent's
+   primary was its ink, and its dividers plum on plum, 2026-11-03) */
+const carriesInk = (c: { hex: string }) => c.hex !== bbPaper && contrast(bbInk, c.hex) >= 3;
+const primaryColor = brandColors.find((c) => c.name === "primary" || c.roles.includes("primary"));
+const bbAccent = (primaryColor && carriesInk(primaryColor) ? primaryColor : brandColors.find((c) => carriesInk(c) && c.lum < 0.75) ?? brandColors.find(carriesInk))?.hex ?? bbPaper;
+/* do's and don'ts: every text-on-ground pairing of two brand colors, scored by WCAG contrast */
+/* two tokens of one value are one color here: no 1:1 "pair" of a color with itself */
+const pairings = brandColors.flatMap((g) => brandColors.filter((f) => f.hex !== g.hex).map((f) => ({ ground: g, ink: f, ratio: contrast(f.hex, g.hex) })));
+const dos = pairings.filter((p) => p.ratio >= 4.5).sort((a, b) => b.ratio - a.ratio).slice(0, 12);
+const donts = pairings.filter((p) => p.ratio < 3).sort((a, b) => a.ratio - b.ratio).slice(0, 8);
+/* ---- DESIGN.md's prose, by "## Section", set verbatim for a designer: paragraphs, ### subheads,
+   bullet and numbered lists (nested by indent), tables and code blocks, as blocks. Inline **bold** and
+   *italic* stay; `code` and [links](…) read as their text, as a repo path means nothing to a designer.
+   one fleet site's tables showed as pipe text and its numbered lists ran together (2026-11-03). ---- */
+type Prose =
+  | { kind: "p"; html: string }
+  | { kind: "h"; html: string }
+  | { kind: "list"; ordered: boolean; start: number; items: string[] }
+  | { kind: "table"; head: string[]; align: string[]; rows: string[][] }
+  | { kind: "pre"; text: string };
+const escHtml = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
+/* inline markdown to HTML: code spans are set aside first, so **Ink `#05151b`** stays one bold run */
+const inlineMd = (s: string) => {
+  const code: string[] = [];
+  return escHtml(s.replace(/`([^`]+)`/g, (_, c: string) => `\u0001${code.push(c) - 1}\u0001`))
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+    .replace(/\*\*(?=\S)(.+?)\*\*|__(?=\S)(.+?)__/g, (_, a, b) => `<strong>${a ?? b}</strong>`)
+    .replace(/(^|[^\w*])\*(?=\S)([^*]+?)\*(?!\w)/g, "$1<em>$2</em>")
+    .replace(/(^|[^\w])_(?=\S)([^_]+?)_(?!\w)/g, "$1<em>$2</em>")
+    .replace(/\u0001(\d+)\u0001/g, (_, i) => escHtml(code[+i]))
+    .trim();
+};
+const LIST_ITEM = /^(\s*)([-*+]|\d+[.)])\s+(.*)$/;
+/* a list's lines as items, each nested list inside the item above it */
+const listHtml = (items: { indent: number; ordered: boolean; n: number; text: string }[]): string[] => {
+  const top: { text: string; kids: typeof items }[] = [];
+  for (const it of items) {
+    if (top.length && it.indent > items[0].indent) top[top.length - 1].kids.push(it);
+    else top.push({ text: it.text, kids: [] });
+  }
+  return top.map(({ text, kids }) => inlineMd(text) + (kids.length ? `<${kids[0].ordered ? "ol" : "ul"}${kids[0].ordered && kids[0].n !== 1 ? ` start="${kids[0].n}"` : ""}>${listHtml(kids).map((h) => `<li>${h}</li>`).join("")}</${kids[0].ordered ? "ol" : "ul"}>` : ""));
+};
+const tableCells = (l: string) => l.trim().replace(/^\|/, "").replace(/(?<!\\)\|$/, "").split(/(?<!\\)\|/).map((c) => c.trim().replace(/\\\|/g, "|"));
+const TABLE_RULE = /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/;
+function parseProse(md: string): Prose[] {
+  const out: Prose[] = [], lines = md.replace(/<!--[\s\S]*?-->/g, "").split(/\r?\n/);
+  let para: string[] = [];
+  const flush = () => { if (para.length) out.push({ kind: "p", html: inlineMd(para.join(" ")) }); para = []; };
+  for (let i = 0; i < lines.length; i++) {
+    const l = lines[i];
+    if (!l.trim()) { flush(); continue; }
+    const fence = l.match(/^\s*(```|~~~)/);
+    if (fence) {
+      flush();
+      const body: string[] = [];
+      while (++i < lines.length && !lines[i].trim().startsWith(fence[1])) body.push(lines[i]);
+      out.push({ kind: "pre", text: body.join("\n") });
+      continue;
+    }
+    const h = l.match(/^#{3,6}\s+(.*?)[\s#]*$/);
+    if (h) { flush(); out.push({ kind: "h", html: inlineMd(h[1]) }); continue; }
+    if (/^\s*([-*_])(\s*\1){2,}\s*$/.test(l)) { flush(); continue; } // a horizontal rule
+    if (l.includes("|") && (lines[i + 1] ?? "").includes("|") && TABLE_RULE.test(lines[i + 1])) {
+      flush();
+      const head = tableCells(l), align = tableCells(lines[++i]).map((c) => (/^:-+:$/.test(c) ? "center" : /-:$/.test(c) ? "right" : ""));
+      const rows: string[][] = [];
+      while (i + 1 < lines.length && lines[i + 1].includes("|") && lines[i + 1].trim()) rows.push(tableCells(lines[++i]).map(inlineMd));
+      out.push({ kind: "table", head: head.map(inlineMd), align, rows });
+      continue;
+    }
+    if (LIST_ITEM.test(l)) {
+      flush();
+      /* the whole list: its items, their wrapped lines and nested items, across one blank line between
+         items; a bullet after a numbered item (or the reverse) at the list's own indent starts a new list */
+      const items: { indent: number; ordered: boolean; n: number; text: string }[] = [];
+      const sameList = (li: RegExpMatchArray) => !items.length || li[1].length > items[0].indent || /\d/.test(li[2]) === items[0].ordered;
+      for (; i < lines.length; i++) {
+        const li = lines[i].match(LIST_ITEM);
+        if (li && sameList(li)) items.push({ indent: li[1].length, ordered: /\d/.test(li[2]), n: parseInt(li[2], 10) || 1, text: li[3] });
+        else if (!li && lines[i].trim() && !/^\s*(#{1,6}\s|```|~~~|\|)/.test(lines[i])) items[items.length - 1].text += " " + lines[i].trim();
+        else if (!lines[i].trim() && lines[i + 1]?.match(LIST_ITEM) && sameList(lines[i + 1].match(LIST_ITEM)!)) continue;
+        else { i--; break; }
+      }
+      out.push({ kind: "list", ordered: items[0].ordered, start: items[0].n, items: listHtml(items) });
+      continue;
+    }
+    para.push(l.trim().replace(/^>\s?/, ""));
+  }
+  flush();
+  return out;
+}
+const proseOf = (heading: RegExp): Prose[] => {
+  const body = designSrc.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, "");
+  const sec = body.split(/^## /m).slice(1).find((p) => heading.test(p.split("\n")[0]));
+  return sec ? parseProse(sec.split("\n").slice(1).join("\n")) : [];
+};
+/* the blocks as HTML, for <div class="bb-prose" set:html>: a table or code block spans the columns, and
+   so does the paragraph that leads into it ("The sizes step down at each level:") */
+const proseHtml = (blocks: Prose[]) => blocks.map((b, i) => {
+  if (b.kind === "p") return blocks[i + 1]?.kind === "table" || blocks[i + 1]?.kind === "pre" ? `<p class="bb-lead">${b.html}</p>` : `<p>${b.html}</p>`;
+  if (b.kind === "h") return `<h3 class="bb-prose-h">${b.html}</h3>`;
+  if (b.kind === "pre") return `<pre class="bb-pre">${escHtml(b.text)}</pre>`;
+  if (b.kind === "list") return `<${b.ordered ? "ol" : "ul"} class="bb-list"${b.ordered && b.start !== 1 ? ` start="${b.start}"` : ""}>${b.items.map((h) => `<li>${h}</li>`).join("")}</${b.ordered ? "ol" : "ul"}>`;
+  const al = (i: number) => (b.align[i] ? ` style="text-align:${b.align[i]}"` : "");
+  return `<div class="bb-table-wrap"><table class="bb-table"><thead><tr>${b.head.map((c, i) => `<th scope="col"${al(i)}>${c}</th>`).join("")}</tr></thead><tbody>${b.rows.map((r) => `<tr>${b.head.map((_, i) => `<td${al(i)}>${r[i] ?? ""}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+}).join("");
+const overview = proseOf(/^Overview/i);
+const colorStory = proseOf(/^Colou?rs?/i);
+const typeStory = proseOf(/^Typography/i);
+const dosDonts = proseOf(/^Do['’]?s/i);
+/* a site whose DESIGN.md has a logo section (one fleet site's "Logo & Brand Assets") opens the Logo chapter with it */
+const logoStory = proseOf(/^(Logos?|Brand assets|Marks?)\b/i);
+/* the type hierarchy's notes: the comment on each typography role's line ("display:  # the hero h1") */
+const typeNotes = new Map<string, string>();
+{
+  const fm = designSrc.match(/^---\r?\n([\s\S]*?)\r?\n---/)?.[1] ?? "";
+  const sec = fm.split(/^typography:\s*$/m)[1]?.split(/^\S/m)[0] ?? "";
+  for (const m of sec.matchAll(/^ {2}([\w-]+):\s*#\s*(.*)$/gm)) typeNotes.set(m[1], m[2].replace(/^--[\w-]+(\s*\/\s*--[\w-]+)*:\s*/, "").trim());
+}
+const familyOf = (p: Record<string, string>) => (p.fontFamily ?? "").split(",")[0].replace(/["']/g, "").trim();
+const families = (() => {
+  const out = new Map<string, { family: string; stack: string; roles: { name: string; p: Record<string, string> }[]; weights: Set<string> }>();
+  for (const [name, p] of typeLevels) {
+    const f = familyOf(p);
+    if (!f) continue;
+    const e = out.get(f) ?? { family: f, stack: p.fontFamily, roles: [], weights: new Set<string>() };
+    e.roles.push({ name, p });
+    if (p.fontWeight) e.weights.add(p.fontWeight);
+    out.set(f, e);
+  }
+  return [...out.values()];
+})();
+/* a hierarchy sample: the level's own style, its tracking in em (so it scales with the type) and its
+   real size as --bb-fs (a phone shrinks the sample to fit, never enlarges it) */
+const bbSampleStyle = (p: Record<string, string>) => {
+  const fs = parseFloat(p.fontSize ?? ""), ls = parseFloat(p.letterSpacing ?? "");
+  const em = /px$/.test(p.letterSpacing ?? "") && /px$/.test(p.fontSize ?? "") && fs ? `${(ls / fs).toFixed(4)}em` : p.letterSpacing;
+  return typeStyle({ ...p, letterSpacing: em ?? "" }) + (p.fontSize ? `;--bb-fs:${p.fontSize}` : "");
+};
+/* a note for a designer: no CSS class or token references */
+const plainNote = (s?: string) => (s ?? "").replace(/\s*\((?:--|\.)[\w-]+\)/g, "").replace(/,?\s*global \.[\w-]+/g, "").replace(/\s{2,}/g, " ").trim();
+/* the brand book's own type: the display family for its headings, the body family for its text */
+const bbDisplay = families[0]?.stack ?? "Georgia, serif";
+const bodyRole = typeLevels.find(([n]) => /^(base|body|text|paragraph)$/.test(n)) ?? typeLevels.find(([, p]) => familyOf(p) !== families[0]?.family);
+const bbText = bodyRole?.[1].fontFamily ?? "system-ui, sans-serif";
+/* the site's marks for the Logo chapter: whatever the repo ships under public/ (the curated slot adds the logo) */
+/* the site's font stylesheets, found in its layouts (a Google Fonts link, the lean pass's self-hosted
+   /assets/fonts/… sheet, or an Elementor port's local …/google-fonts/css/… sheet): the brand book's
+   specimens are set in the real faces. A URL in a data-* attribute is not a sheet the page loads
+   (electriccollab.com's data-lean-gfonts restore URL requested two Google faces the site self-hosts) */
+const fontSheets = (() => {
+  const dir = path.join(process.cwd(), "src", "layouts");
+  const out = new Set<string>();
+  if (fs.existsSync(dir)) for (const f of fs.readdirSync(dir)) {
+    if (!f.endsWith(".astro")) continue;
+    const src = fs.readFileSync(path.join(dir, f), "utf8");
+    for (const m of src.matchAll(/(data-[\w-]+=\s*\{?\s*)?["'`](https:\/\/fonts\.googleapis\.com\/css2?\?[^"'`\s]+|\/assets\/(?:fonts\/|[^"'`\s]*google-fonts\/)[^"'`\s?]+\.css(?:\?[^"'`\s]*)?|https:\/\/use\.typekit\.net\/[\w-]+\.css)["'`]/g)) if (!m[1] && !/&&\s*(\(\s*)?<link\b[^>]*$/.test(src.slice(Math.max(0, m.index! - 200), m.index))) out.add(m[2].replace(/&amp;/g, "&"));
+  }
+  return [...out];
+})();
+/* ---- the Logo chapter's marks: the site icon in its best form, then the brand files under
+   public/assets/brand, one per mark (its sizes and formats are one mark: the SVG, else the largest
+   file), each on the ground its name asks for, at most MARK_CAP. One fleet site showed all 24 of its
+   files, dark variants on white, and itspmagazine.com's only icon, a favicon.ico, was left out
+   (2026-11-03). A variant names the ground it is FOR, as the platform's own brand kits do:
+   -dark, -white, -reverse, -inverse, -knockout or on-<a dark color> sit on the ink; -light, -black,
+   on-white and a plain name on the paper. ---- */
+type Mark = { src: string; name: string; ground: "ink" | "paper"; icon: boolean; opaque: boolean; small: boolean };
+const MARK_CAP = 12;
+const marksMore: string[] = []; // the marks past the cap, named in a footnote
+const marks = ((): Mark[] => {
+  const pub = path.join(process.cwd(), "public");
+  /* a PNG with no alpha channel and no tRNS chunk paints its own ground, like an app icon */
+  const opaque = (file: string) => {
+    if (!/\.png$/i.test(file)) return /\.jpe?g$/i.test(file);
+    try {
+      const b = fs.readFileSync(file);
+      if (b.toString("latin1", 12, 16) !== "IHDR" || ![0, 2, 3].includes(b[25])) return false;
+      for (let i = 8; i + 8 <= b.length; i += 12 + b.readUInt32BE(i)) {
+        const t = b.toString("latin1", i + 4, i + 8);
+        if (t === "tRNS") return false;
+        if (t === "IDAT") return true;
+      }
+    } catch {}
+    return false;
+  };
+  const groundOf = (name: string): Mark["ground"] => {
+    const w = name.toLowerCase().split(/[^a-z0-9]+/), on = w.includes("on") ? w[w.indexOf("on") + 1] : undefined;
+    if (on) return /^(white|light|paper|cream|ivory)$/.test(on) ? "paper" : "ink";
+    return w.some((x) => /^(dark|white|reverse|reversed|inverse|inverted|knockout|negative)$/.test(x)) ? "ink" : "paper";
+  };
+  /* the site icon: its best form only (a 32px favicon beside the touch icon is the same mark, smaller) */
+  const iconFile = ["favicon.svg", "apple-touch-icon.png", "favicon-32.png", "favicon.ico"].find((f) => fs.existsSync(path.join(pub, f)));
+  const iconBytes = iconFile ? fs.readFileSync(path.join(pub, iconFile)) : undefined;
+  const out: Mark[] = iconFile ? [{ src: `/${iconFile}`, name: "Site icon", ground: "paper", icon: true, opaque: opaque(path.join(pub, iconFile)), small: /^favicon(-32\.png|\.ico)$/.test(iconFile) }] : [];
+  /* the brand files under public/assets/brand or public/brand (superbloomtalent), two folders deep
+     (blinkpages.com keeps its kit in brand/blinkpages/), less social covers, and less the folders and
+     files that hold other art: one site's chapter showed its award and community partners' logos as its
+     own, and listed its team's headshots (2026-11-25). What this misses, the sl:logos slot adds */
+  const files: string[] = [];
+  const walk = (dir: string, depth: number) => {
+    if (fs.existsSync(dir)) for (const f of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (f.isDirectory()) { if (depth < 2 && !/^(social|og|covers?|press|_)|^(awards?|badges?|cards?|clients?|community|customers?|headshots?|icons?|images?|live|partners?|patterns?|people|photos?|sponsors?|staff|team)([-_.]|$)/i.test(f.name)) walk(path.join(dir, f.name), depth + 1); }
+      else if (/\.(svg|png|webp|avif|jpe?g)$/i.test(f.name) && !/(^|[-_])(og|cover|banner|social|share|facebook|linkedin|twitter|pattern|texture|bg|background|photo|headshot)([-_.]|$)/i.test(f.name)) files.push(path.join(dir, f.name));
+    }
+  };
+  for (const brand of [path.join(pub, "assets", "brand"), path.join(pub, "brand")]) walk(brand, 0);
+  /* a mark is its name less any size (-lg, -512, -32x32, @2x); it shows as its SVG, else its largest file */
+  const FORMATS = ["svg", "png", "webp", "avif", "jpg", "jpeg"];
+  const baseOf = (f: string) => {
+    let b = path.basename(f).replace(/\.\w+$/, ""), was;
+    do { was = b; b = b.replace(/@\d(\.\d)?x$/i, "").replace(/[-_](xs|sm|small|md|medium|lg|large|xl|xxl|\d{2,4}(x\d{2,4})?(px)?)$/i, ""); } while (b !== was);
+    return path.relative(pub, path.join(path.dirname(f), b));
+  };
+  const rank = (f: string) => FORMATS.indexOf(path.extname(f).slice(1).toLowerCase()) * 1e9 - fs.statSync(f).size;
+  const best = new Map<string, string>();
+  for (const f of files) { const k = baseOf(f), cur = best.get(k); if (!cur || rank(f) < rank(cur)) best.set(k, f); }
+  /* the icon again under another name (brand/blink-favicon.svg = favicon.svg) is shown once, as the icon */
+  const list = [...best].sort(([a], [b]) => a.localeCompare(b)).filter(([, f]) => !(iconBytes && fs.statSync(f).size === iconBytes.length && fs.readFileSync(f).equals(iconBytes)));
+  for (const [k, f] of list.slice(0, MARK_CAP)) out.push({ src: "/" + path.relative(pub, f).split(path.sep).join("/"), name: titleCase(path.basename(k)), ground: groundOf(path.basename(k)), icon: false, opaque: opaque(f), small: false });
+  marksMore.push(...list.slice(MARK_CAP).map(([k]) => titleCase(path.basename(k))));
+  return out;
+})();
+const groundName = (g: Mark["ground"]) => titleCase(brandColors.find((c) => c.hex === (g === "ink" ? bbInk : bbPaper))?.name ?? (g === "ink" ? "dark" : "light"));
+/* the cover's mark sits on the ink: the site icon, on a paper tile unless it paints its own ground; else a
+   mark made for dark grounds, as it is; else the first mark on a tile. A dark mark on a transparent
+   ground never meets the ink (2026-11-03) */
+const coverMark = marks.find((m) => m.icon) ?? marks.find((m) => m.ground === "ink" && !m.opaque) ?? marks[0];
+const coverMarkClass = !coverMark ? "" : coverMark.opaque ? "bb-cover-mark bb-cover-mark--app" : coverMark.icon || coverMark.ground !== "ink" ? "bb-cover-mark bb-cover-mark--tile" : "bb-cover-mark";
+/* ---- LAYOUT, drawn the way a designer reads a spec: each spacing measure is sorted by what it
+   measures (read from its name), then drawn as that. The container, its gutters and the header go on a
+   to-scale desktop artboard; the breakpoints on a ruler beside the common device widths; every other
+   measure at actual size, as a height, a padding or a gap. One bar per token read as a bar chart: a
+   height, a padding and a breakpoint looked alike, and the widest were clipped to the column
+   (battalionadvertising.com, 2026-11-02). ---- */
+const toPx = (v: string) => { const m = v.trim().match(/^(-?[\d.]+)(px|rem)$/); return m ? +m[1] * (m[2] === "rem" ? 16 : 1) : NaN; };
+type MeasureKind = "bp" | "container" | "gutter" | "height" | "pad" | "width" | "gap";
+const measureKind = (n: string, px: number): MeasureKind => {
+  const has = (...xs: string[]) => n.toLowerCase().split(/[-_.]+/).some((w) => xs.includes(w));
+  if (has("bp", "breakpoint", "breakpoints", "screen", "mq")) return "bp";
+  if (has("gutter", "gutters", "margin", "edge", "inset")) return "gutter";
+  if (has("height", "h")) return "height";
+  if (has("pad", "padding")) return "pad";
+  if (has("max", "container", "canvas", "wrap", "wrapper", "content", "measure", "page") && px >= 320) return "container";
+  if (has("width", "w", "size")) return "width";
+  return "gap";
+};
+const measures = (designSrc
+  ? scalars(design, "spacing").map(([n, e]) => ({ n, value: e.value, prop: tokenOf(live, "spacing", n, e) ?? `--${n}`, note: plainNote(noteOf(e.comment)) }))
+  : byKind.get("space")!.map((t) => ({ n: t.name.replace(/^--/, ""), value: t.value, prop: t.name, note: "" }))
+).map((m) => { const px = toPx(m.value); return { ...m, px, title: titleCase(m.n.replace(/^(spacing|space|bp)-/, "")), kind: measureKind(m.n, px) }; });
+type Measure = (typeof measures)[number];
+const pct = (v: number, of: number) => `${((v / of) * 100).toFixed(3)}%`;
+/* the artboard: the first container, a gutter narrower than a quarter of it, a header-ish height */
+const container = measures.find((m) => m.kind === "container" && m.px > 0);
+const gutter = container && measures.find((m) => m.kind === "gutter" && m.px > 0 && m.px < container.px / 4);
+const headerBar = container && measures.find((m) => m.kind === "height" && /header|nav|topbar|masthead|menu/i.test(m.n) && m.px > 0 && m.px < 400);
+const art = container && (() => {
+  const W = Math.max(1440, Math.ceil((container.px + 160) / 10) * 10), H = Math.round(W * 0.4);
+  return { W, H, side: pct((W - container.px) / 2, W), width: pct(container.px, W), gutter: gutter ? pct(gutter.px, container.px) : "0%", header: headerBar ? pct(headerBar.px, H) : "0%", margin: Math.round((W - container.px) / 2) };
+})();
+/* the breakpoint ruler: 0 to past the widest breakpoint (at least the 1440 desktop artboard). Each
+   breakpoint's DESIGN.md comment starts with the side its level lies on, as its media query has it
+   (DESIGN.md.template's spacing comment, style-library.md §2b):
+     "below this, …"    the level under it stops 1px short of it   (max-width: 777.98px for 778)
+     "up to this, …"    the level under it includes it             (max-width: 767px); also "through this"
+     "from this up, …"  the level over it starts at it             (min-width: 1025px)
+   so a breakpoint's edge, the first width of the level over it, is its value, or its value + 1 "up to"
+   it. Every breakpoint was read as "below" once, so one fleet site's max-width: 767px ruled 0–766. */
+const BP_UPTO = /^\s*(up to|through|thru|max)\b/i, BP_BELOW = /^\s*(below|under|less than)\b/i, BP_FROM = /^\s*(from|above|over|at least|min)\b/i;
+const bps = measures.filter((m) => m.kind === "bp" && m.px > 0).map((m) => {
+  const side = BP_UPTO.test(m.note) ? "upto" : BP_BELOW.test(m.note) ? "below" : BP_FROM.test(m.note) ? "from" : "";
+  return { ...m, side, edge: m.px + (side === "upto" ? 1 : 0), level: m.title.replace(/\s+(Max|Min|Up|Down)$/i, "") };
+}).sort((a, b) => a.edge - b.edge);
+const rulerMax = Math.max(1440, Math.ceil(((bps.at(-1)?.edge ?? 0) * 1.2) / 100) * 100);
+const edgeOf = (px: number) => (px / rulerMax > 0.86 ? "end" : "");
+/* a range takes a level's name from the breakpoint whose comment says it bounds that range: "below" or
+   "up to" names the range under it, "from" the one over it. When every breakpoint names the range under
+   it, the top range is Desktop (unless one is already); when every one names the range over it, the
+   bottom range is Base */
+const namesUnder = (b?: (typeof bps)[number]) => !!b && (b.side === "below" || b.side === "upto");
+const bpAllUnder = bps.length > 0 && bps.every(namesUnder), bpAllOver = bps.length > 0 && bps.every((b) => b.side === "from");
+const rulerRanges = bps.length ? [0, ...bps.map((b) => b.edge)].map((from, i, a) => ({
+  from, to: a[i + 1] ?? rulerMax, last: i === a.length - 1,
+  name: namesUnder(bps[i]) ? bps[i].level
+    : bps[i - 1]?.side === "from" ? bps[i - 1].level
+    : i === bps.length && bpAllUnder && !bps.some((b) => /desktop/i.test(b.title)) ? "Desktop"
+    : i === 0 && bpAllOver ? "Base" : "",
+})) : [];
+/* device names, not the site's level names: a "Tablet" breakpoint and a 768px iPad are different things */
+const DEVICES = [["phone", "iPhone", 390], ["tablet", "iPad", 768], ["laptop", "Laptop", 1280], ["desktop", "Desktop", 1440]] as const;
+const KIND_LABEL: Record<MeasureKind, string> = { bp: "a breakpoint", container: "the container", gutter: "a gutter", height: "a height", pad: "a padding", width: "a width", gap: "a gap" };
+/* everything else at actual size (shrunk to fit past 200px, and labelled so) */
+const onArtboard = new Set<Measure | undefined>([container, gutter, headerBar]);
+const actualSize = measures.filter((m) => !onArtboard.has(m) && m.kind !== "bp");
+/* the largest each drawing can show at 1:1 in its tile: a padding twice beside its content, a gap between two blocks */
+const fit = (m: Measure) => { const cap = m.kind === "pad" ? 64 : m.kind === "gap" || m.kind === "gutter" ? 110 : 200; return m.px > cap ? cap / m.px : 1; };
+const padAxis = (n: string) => (/(^|-)(x|inline)(-|$)/.test(n) ? "x" : /(^|-)(y|block)(-|$)/.test(n) ? "y" : "both");
+const pxNote = (m: Measure) => (/rem$/.test(m.value) && m.px > 0 ? ` · ${m.px}px` : "");
+const layoutStory = proseOf(/^Layout/i);
+const depthStory = proseOf(/^Elevation/i);
+const shapeStory = proseOf(/^Shapes?\b/i);
+const componentStory = proseOf(/^Components/i);
+/* Do's and Don'ts, split for the last chapter's two columns. Three forms are read: bullets that start
+   "Do …" / "Don't …"; bullets under a **Do** / **Don't** line (one fleet site); bullets under a
+   ### Do / ### Don't subhead. A bullet's own "Do" or "Don't" wins over the line above it, and is
+   dropped, as its column says it. Anything else (a paragraph, a table) is set after the columns. */
+const doList: string[] = [], dontList: string[] = [], dosOther: Prose[] = [];
+{
+  const plain = (html: string) => html.replace(/<[^>]+>/g, "").trim();
+  const DO_HEAD = /^do(?:['’]?s)?\s*:?$/i, DONT_HEAD = /^(?:don['’]?ts?|do not|avoid)\s*:?$/i;
+  const DONT_LEAD = /^(?:don['’]?t|do not)\b/i, DO_LEAD = /^do\b(?!['’]?s?\s*:?$)/i;
+  const drop = (h: string) => h.replace(/^(?:<(strong|em)>\s*(?:don['’]?t|do not|do)\s*[:.]?\s*<\/\1>|(?:don['’]?t|do not|do)\b)[\s:,.—–-]*/i, "").replace(/^[a-z]/, (c) => c.toUpperCase());
+  let side: "" | "do" | "dont" = "";
+  for (const b of dosDonts) {
+    if (b.kind === "h" || b.kind === "p") {
+      const t = plain(b.html);
+      if (DONT_HEAD.test(t)) { side = "dont"; continue; }
+      if (DO_HEAD.test(t)) { side = "do"; continue; }
+    }
+    if (b.kind === "list") {
+      const rest = b.items.filter((h) => {
+        const t = plain(h), s = DONT_LEAD.test(t) ? "dont" : DO_LEAD.test(t) ? "do" : side;
+        if (s) (s === "do" ? doList : dontList).push(DONT_LEAD.test(t) || DO_LEAD.test(t) ? drop(h) : h);
+        return !s;
+      });
+      if (rest.length) dosOther.push({ ...b, items: rest });
+    } else dosOther.push(b);
+  }
+}
+/* the pairs the site uses (DESIGN.md components), each named and scored: a translucent text color is
+   laid over its ground first; a translucent ground has no one ratio, as it depends on what shows through */
+const rgbaOf = (c: string) => { if (/^transparent$/i.test(c.trim())) return [0, 0, 0, 0]; const m = c.match(/rgba?\(\s*([\d.]+)[ ,]+([\d.]+)[ ,]+([\d.]+)(?:[ ,/]+([\d.]+))?/); return m ? [+m[1], +m[2], +m[3], m[4] === undefined ? 1 : +m[4]] : [...hexRgb(c), 1]; };
+const colorName = (v: string) => titleCase(brandColors.find((c) => norm(c.hex) === norm(v))?.name ?? designColors.find(([, x]) => norm(x.value) === norm(v))?.[0] ?? v);
+const pairsInUse = pairs.map((p) => {
+  const [fr, fg, fb, fa] = rgbaOf(p.fg), [br, bg, bb, ba] = rgbaOf(p.bg);
+  const mix = (f: number, g: number) => Math.round(f * fa + g * (1 - fa));
+  const ratio = ba < 1 ? null : contrast(`rgb(${mix(fr, br)}, ${mix(fg, bg)}, ${mix(fb, bb)})`, `rgb(${br}, ${bg}, ${bb})`);
+  /* a pair whose text can't be read on its ground (under 1.5:1) still names itself, in a color that can */
+  const label = ratio !== null && ratio < 1.5 ? (contrast(bbInk, `rgb(${br}, ${bg}, ${bb})`) >= contrast(bbPaper, `rgb(${br}, ${bg}, ${bb})`) ? bbInk : bbPaper) : p.fg;
+  return { ...p, ratio, label, fgName: p.fgKey ? titleCase(p.fgKey) : colorName(p.fg), bgName: p.bgKey ? titleCase(p.bgKey) : colorName(p.bg) };
+});
+const verdictOf = (r: number | null) => (r === null ? "a translucent ground: no single ratio" : `${r.toFixed(1)}:1 · ${r >= 4.5 ? "AA" : r >= 3 ? "large text only" : "below AA"}`);
+
+/* ---- THE COMPONENT EXPLORER (Storybook-style): stories.ts's stories, expanded by explorer.ts, both in
+   src/components/design-system/ (a glob, so a site without them still builds). Each story renders
+   on its own page under /design-system/story/, which the explorer frames. ---- */
+type SxEntry = { slug: string; title: string; group: string; stories: { slug: string; name: string }[] };
+const sxMod = Object.values(import.meta.glob<{ explorer: () => SxEntry[] }>("../components/design-system/explorer.ts", { eager: true }))[0];
+const sx = sxMod?.explorer() ?? [];
+const sxGroups = [...sx.reduce((m, e) => m.set(e.group, [...(m.get(e.group) ?? []), e]), new Map<string, SxEntry[]>())];
+/* a build.format "file" site serves a story at /design-system/story/<id> (its <id>.html): a trailing
+   slash 404s under astro preview and redirects once in production (electriccollab.com, agencydonebetter.com) */
+const storyTail = (() => {
+  for (const f of ["astro.config.mjs", "astro.config.ts", "astro.config.mts"]) {
+    const p = path.join(process.cwd(), f);
+    if (fs.existsSync(p)) return /\bformat\s*:\s*["']file["']/.test(fs.readFileSync(p, "utf8")) ? "" : "/";
+  }
+  return "/";
+})();
+const sxData = JSON.stringify({ base: "/design-system/story/", tail: storyTail, entries: sx }).replace(/</g, "\\u003c");
+const sxViewports: [string, string, string][] = [["fit", "Fit", ""], ["phone", "iPhone", "390"], ["tablet", "iPad", "768"], ["desktop", "Desktop", "1440"]];
+
+/* the appendix, lettered in order: Blocks only on an older page that still has block cards */
+const appendix: [string, string][] = [...(slBlockGroups.length ? [["blocks", "Blocks"] as [string, string]] : []), ["page-specific", "Not in the explorer"], ["tokens", "Token reference"], ["classes", "Global classes"]];
+const letterOf = (id: string) => String.fromCharCode(65 + appendix.findIndex(([a]) => a === id));
+
+const nav: [string, [string, string][]][] = [
+  ["Brand book", [["cover", "Cover"], ["logo", "01 Logo & icon"], ["colors", "02 Color"], ["typography", "03 Typography"], ["layout", "04 Layout"], ["depth", "05 Depth & shape"], ["components", "06 Components"], ...(dosDonts.length ? [["dos", "07 Do's & don'ts"] as [string, string]] : [])]],
+  ["Appendix", appendix.map(([id, label]) => [id, `${letterOf(id)}. ${label}`] as [string, string])],
+];
+---
+
+<!doctype html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="design-system-build" content={built} />
+    <title>Design System — {siteName}</title>
+    {/* the site's fonts, as its layouts load them (fontSheets), and its self-hosted fonts sheet (the glob above) */}
+    {[...new Set([...fontSheets, ...cssImports])].map((href) => <link rel="stylesheet" href={href} />)}
+    <style is:inline set:html={siteInline} />
+    <style>
+      /* set in the brand's own type and colors (DESIGN.md → --bb-* on .sl), so the page reads as the brand */
+      /* a unitless line height: a site's em line height on body arrives as a fixed length and
+         double-spaced the captions (electriccollab.com) */
+      .sl { display: grid; grid-template-columns: 15rem minmax(0, 1fr); font-family: var(--bb-text, system-ui, sans-serif); line-height: 1.5; color: #1a1a1a; background: #fff; }
+      /* the editor's admin bar is fixed at the top for a signed-in editor and publishes its height as
+         --blink-topbar-height: the sticky contents sit below it, and so does every anchor (the html
+         scroll-padding in the global block below, the same rule a site's global.css may already set) */
+      .sl-nav { position: sticky; top: var(--blink-topbar-height, 0px); align-self: start; height: calc(100vh - var(--blink-topbar-height, 0px)); overflow-y: auto; padding: 1.25rem .75rem 2rem; border-right: 1px solid #e5e5e5; background: #fafafa; font-size: .875rem; }
+      .sl-nav a { display: block; padding: .3rem .625rem; border-radius: 4px; color: #333; text-decoration: none; }
+      .sl-nav a:hover { background: #eef0f3; }
+      .sl-nav a.is-current { background: color-mix(in srgb, var(--bb-accent, #1d4ed8) 18%, #fff); color: var(--bb-ink, #1d4ed8); }
+      .sl-nav-home { font-family: var(--bb-display, inherit); font-size: 1.125rem; font-weight: 400; }
+      .sl-nav-label { margin: 1.25rem .625rem .25rem; color: #6b7280; font-size: .6875rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
+      .sl-nav-sub a { padding-left: 1.5rem; font-size: .8125rem; color: #555; }
+      .sl-main { min-width: 0; max-width: none; margin: 0; padding: 2rem 2.5rem 6rem; }
+      .sl-main section, .sx { scroll-margin-top: 1rem; }
+      .sl-h2 { margin: 3.5rem 0 1rem; padding-bottom: .375rem; border-bottom: 1px solid var(--bb-accent, #ddd); color: inherit; font: 400 1.875rem/1.2 var(--bb-display, Georgia, serif); letter-spacing: normal; text-transform: none; }
+      .sl-h3 { margin: 2rem 0 .75rem; color: inherit; font: 600 1.125rem/1.3 var(--bb-text, system-ui, sans-serif); letter-spacing: normal; text-transform: none; scroll-margin-top: 1rem; }
+      /* ---- the brand book ---- */
+      .bb { margin: -2rem -2.5rem 0; }
+      .sl-main > header { scroll-margin-top: 1rem; }
+      .bb-label { margin: 0 0 .75rem; font-size: .75rem; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: color-mix(in srgb, currentColor 70%, transparent); }
+      .bb-small { margin: .25rem 0 0; max-width: 60ch; font-size: .875rem; line-height: 1.5; opacity: .8; }
+      .bb-prose { columns: 2 22rem; column-gap: 3rem; font-size: 1rem; line-height: 1.65; }
+      .bb-prose p { margin: 0 0 1em; break-inside: avoid; }
+      .bb-li { padding-left: 1.1em; text-indent: -1.1em; }
+      .bb-li::before { content: "—  "; color: var(--bb-accent); }
+      .bb-cover { position: relative; display: grid; align-content: end; gap: 1.25rem; min-height: min(78vh, 46rem); padding: clamp(2.5rem, 6vw, 5.5rem); background: var(--bb-ink); color: var(--bb-paper); }
+      .bb-kicker { margin: 0; font-size: .8125rem; letter-spacing: .24em; text-transform: uppercase; color: var(--bb-accent); }
+      .bb-title { margin: 0; max-width: 12ch; color: inherit; font: 400 clamp(2.5rem, 9vw, 8.5rem)/.95 var(--bb-display, Georgia, serif); letter-spacing: -.02em; text-transform: none; }
+      .bb-cover-lede { margin: 0; max-width: 46ch; font-size: 1.125rem; line-height: 1.6; opacity: .85; }
+      .bb-dot-rows { display: grid; gap: .875rem; max-width: calc(100% - 6.5rem); margin: 1rem 0 0; }
+      .bb-dot-row { display: grid; grid-template-columns: 5.5rem minmax(0, 1fr); align-items: center; gap: 1rem; }
+      .bb-dot-label { margin: 0; font-size: .6875rem; letter-spacing: .18em; text-transform: uppercase; opacity: .7; }
+      .bb-dots { display: flex; flex-wrap: wrap; gap: .625rem; margin: 0; padding: 0; list-style: none; }
+      .bb-dots li { width: 1.75rem; height: 1.75rem; border-radius: 50%; box-shadow: 0 0 0 1px color-mix(in srgb, var(--bb-paper) 45%, transparent); }
+      .bb-dot-row--lead .bb-dots li { width: 2.75rem; height: 2.75rem; }
+      .bb-cover-mark { position: absolute; right: clamp(2rem, 5vw, 4.5rem); bottom: clamp(2rem, 5vw, 4.5rem); width: 72px; height: 72px; object-fit: contain; }
+      .bb-intro, .bb-story { padding: clamp(2.5rem, 5vw, 4rem) clamp(2rem, 5vw, 4.5rem) 0; }
+      .bb-intro { padding-bottom: clamp(2.5rem, 5vw, 4rem); }
+      /* the book's own sections are not page bands: a site's bare `section { padding-block }` and
+         `section + section { border-top }` padded and ruled every chapter (go.hilley-solis.com,
+         ninebark, marlowstreet, raytrammell) */
+      .bb-chapter { scroll-margin-top: 0; padding-top: 0; padding-bottom: clamp(2.5rem, 5vw, 4rem); border-top: 0; }
+      .sl-appendix > section { padding-block: 0; border-top: 0; }
+      .bb-body { padding: clamp(2rem, 4vw, 3rem) clamp(2rem, 5vw, 4.5rem) 0; }
+      .bb-story--two { display: grid; grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr)); gap: 2rem 3.5rem; }
+      .bb-prose--one { columns: 1; }
+      .bb-alert { margin: 1.5rem clamp(2rem, 5vw, 4.5rem) 0; }
+      .bb-source { max-width: 72ch; margin: 2rem 0 0; padding-top: 1rem; border-top: 1px solid #e5e5e5; color: #6b7280; font-size: .8125rem; line-height: 1.55; }
+      /* "For developers": a chapter's tokens and classes, collapsed at its foot */
+      .bb-dev { margin: clamp(2rem, 4vw, 3rem) clamp(2rem, 5vw, 4.5rem) 0; border: 1px solid #e5e5e5; border-radius: 8px; background: #fafafa; }
+      .bb-dev > summary { display: flex; flex-wrap: wrap; gap: .25rem .75rem; align-items: baseline; padding: .875rem 1.125rem; color: #111; font-size: .75rem; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; list-style: none; cursor: pointer; }
+      .bb-dev > summary::-webkit-details-marker { display: none; }
+      .bb-dev > summary::before { content: "▸"; color: #6b7280; }
+      .bb-dev[open] > summary::before { content: "▾"; }
+      .bb-dev > summary span { color: #6b7280; font-size: .8125rem; font-weight: 400; letter-spacing: 0; text-transform: none; }
+      .bb-dev[open] > summary { border-bottom: 1px solid #e5e5e5; }
+      .bb-dev > :not(summary) { margin: 1rem 1.125rem; }
+      .bb-dev-scroll { overflow-x: auto; }
+      .bb-dev-table { width: 100%; border-collapse: collapse; background: #fff; font-size: .8125rem; }
+      .bb-dev-table th { padding: .4rem .5rem; border-bottom: 1px solid #e5e5e5; color: #6b7280; font-size: .6875rem; font-weight: 600; letter-spacing: .06em; text-align: left; text-transform: uppercase; }
+      .bb-dev-table td { padding: .45rem .5rem; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
+      .bb-dev-table code { font: .75rem/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; word-break: break-all; }
+      .bb-dev-chip { display: inline-block; width: .875rem; height: .875rem; margin-right: .5rem; border-radius: 2px; vertical-align: -2px; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .15); }
+      .bb-pair-name { font-weight: 600; }
+      .bb-checks { display: grid; grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr)); gap: 2rem 3.5rem; padding: 0 clamp(2rem, 5vw, 4.5rem); }
+      .bb-check { margin: 0; padding: 0; list-style: none; }
+      .bb-check li { position: relative; padding: .75rem 0 .75rem 2rem; border-bottom: 1px solid #e5e5e5; line-height: 1.55; }
+      .bb-check li::before { content: "✓"; position: absolute; top: .75rem; left: .25rem; color: #15803d; font-weight: 700; }
+      .bb-check--dont li::before { content: "✕"; color: #b91c1c; }
+      .sl-depth-box, .sl-corner-box { width: 96px; height: 64px; border: 1px solid color-mix(in srgb, var(--bb-ink, #1a1a1a) 28%, #fff); background: #fff; }
+      .sl-corner-box { background: color-mix(in srgb, var(--bb-accent, #2563eb) 22%, #fff); }
+      .bb-inset { margin-inline: clamp(2rem, 5vw, 4.5rem); }
+      .bb-divider { display: flex; align-items: baseline; gap: 1.5rem; padding: clamp(3rem, 8vw, 6.5rem) clamp(2rem, 5vw, 4.5rem) clamp(2rem, 4vw, 3rem); }
+      .bb-num { font: 400 1rem/1 var(--bb-text, sans-serif); letter-spacing: .2em; opacity: .75; }
+      .bb-h { margin: 0; color: inherit; font: 400 clamp(2.25rem, 7vw, 6rem)/1 var(--bb-display, Georgia, serif); letter-spacing: -.01em; text-transform: none; }
+      .bb-palette { margin-top: clamp(2rem, 4vw, 3rem) !important; display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 0; margin: 0 clamp(2rem, 5vw, 4.5rem); border: 1px solid #e5e5e5; }
+      .bb-swatch { margin: 0; border-right: 1px solid #e5e5e5; }
+      .bb-swatch-chip { height: 13rem; }
+      .bb-swatch figcaption { padding: 1rem 1rem 1.25rem; }
+      .bb-swatch-name { margin: 0; font: 400 1.375rem/1.2 var(--bb-display, Georgia, serif); }
+      .bb-swatch-role { font: 600 .6875rem/1 var(--bb-text, sans-serif); letter-spacing: .14em; text-transform: uppercase; color: #6b7280; }
+      .bb-swatch-note { margin: .5rem 0 0; font-size: .8125rem; line-height: 1.45; color: #4b5563; }
+      .bb-codes { display: grid; grid-template-columns: auto 1fr; gap: .2rem .75rem; margin: .875rem 0 0; font: .75rem/1.3 ui-monospace, SFMono-Regular, Menlo, monospace; }
+      .bb-codes dt { color: #9ca3af; }
+      .bb-codes dd { margin: 0; }
+      .bb-footnote { margin: 1rem clamp(2rem, 5vw, 4.5rem) 0; font-size: .8125rem; color: #6b7280; }
+      .bb-pair-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr)); gap: 3rem; padding: clamp(2.5rem, 5vw, 4rem) clamp(2rem, 5vw, 4.5rem) 0; }
+      .bb-pairs { display: grid; grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr)); gap: .5rem; margin: 1.25rem 0 0; padding: 0; list-style: none; }
+      .bb-pairs li { display: grid; align-content: end; gap: .25rem; aspect-ratio: 1; padding: .875rem; font-size: .75rem; line-height: 1.3; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .06); }
+      .bb-pairs b { font: 400 2.75rem/1 var(--bb-display, Georgia, serif); }
+      .bb-pairs--dont li { position: relative; }
+      .bb-pairs--dont li::after { content: "✕"; position: absolute; top: .5rem; right: .625rem; font-size: .875rem; color: #b91c1c; }
+      .bb-hier { margin: 0 clamp(2rem, 5vw, 4.5rem); padding: 0; list-style: none; border-top: 1px solid #e5e5e5; }
+      .bb-hier li { display: grid; grid-template-columns: 13rem minmax(0, 1fr); gap: .25rem 2rem; padding: 1.5rem 0; border-bottom: 1px solid #e5e5e5; }
+      .bb-hier .bb-small { grid-column: 2; }
+      .bb-hier-label { margin: 0; font-weight: 600; font-size: .9375rem; }
+      .bb-hier-label span { display: block; margin-top: .25rem; font-weight: 400; font-size: .75rem; color: #6b7280; }
+      .bb-hier-sample { margin: 0; overflow-wrap: anywhere; }
+      .bb-specimen { margin: 3rem 0 0; padding: clamp(3rem, 7vw, 5.5rem) clamp(2rem, 5vw, 4.5rem); }
+      .bb-specimen-name { margin: 0; padding-bottom: 1.5rem; border-bottom: 1px solid color-mix(in srgb, currentColor 35%, transparent); font-size: clamp(3.5rem, 9vw, 8rem); line-height: 1; overflow-wrap: anywhere; }
+      .bb-specimen-glyphs { margin: 1.75rem 0; font-size: clamp(1.25rem, 2.4vw, 2rem); line-height: 1.45; letter-spacing: .06em; overflow-wrap: anywhere; opacity: .9; }
+      .bb-specimen-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr)); gap: 2.5rem; padding-top: 1.5rem; border-top: 1px solid color-mix(in srgb, currentColor 35%, transparent); }
+      .bb-weights, .bb-usage { margin: 0; padding: 0; list-style: none; font-size: .9375rem; line-height: 1.6; }
+      .bb-weights li { font-size: 1.25rem; }
+      .bb-usage li { padding: .375rem 0; border-bottom: 1px solid color-mix(in srgb, currentColor 18%, transparent); }
+      .bb-marks { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 1rem; padding: clamp(2.5rem, 5vw, 4rem) clamp(2rem, 5vw, 4.5rem) 0; }
+      .bb-mark { display: grid; place-items: center; gap: 1rem; min-height: 15rem; margin: 0; padding: 2rem 1rem 1rem; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .08); }
+      .bb-mark img, .bb-mark svg { max-width: 70%; max-height: 7rem; object-fit: contain; }
+      .bb-mark figcaption { align-self: end; font-size: .75rem; letter-spacing: .08em; opacity: .7; }
+      .sl-lede, .sl-hint { max-width: 70ch; margin: 0 0 1rem; color: #555; }
+      .sl-hint { font-size: .875rem; }
+      .sl-note { max-width: 70ch; margin: .75rem 0 0; padding: .625rem .875rem; border-left: 4px solid #1d4ed8; background: #f6f7f9; font-size: .875rem; }
+      .sl-note--alert { border-left-color: #b91c1c; }
+      .sl-note ul { margin: .375rem 0 0; padding-left: 1.2em; }
+      .sl-code { font: .75rem/1.35 ui-monospace, SFMono-Regular, Menlo, monospace; color: #555; overflow-wrap: anywhere; }
+      .sl-swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: .75rem; }
+      .sl-swatch { margin: 0; border: 1px solid #e5e5e5; border-radius: 6px; overflow: hidden; }
+      .sl-chip { height: 64px; border-bottom: 1px solid #e5e5e5; background-image: linear-gradient(45deg, #f2f2f2 25%, transparent 25%, transparent 75%, #f2f2f2 75%), linear-gradient(45deg, #f2f2f2 25%, transparent 25%, transparent 75%, #f2f2f2 75%); background-size: 12px 12px; background-position: 0 0, 6px 6px; }
+      .sl-chip > span { display: block; height: 100%; }
+      .sl-swatch figcaption { padding: .5rem .625rem; display: grid; gap: .125rem; }
+      .sl-role { font-size: .8125rem; color: #333; }
+      .sl-rows { display: grid; gap: 0; }
+      .sl-row { display: grid; grid-template-columns: minmax(12rem, 18rem) minmax(0, 1fr); gap: 1rem; align-items: center; padding: .625rem 0; border-bottom: 1px dashed #e5e5e5; }
+      .sl-row > * { min-width: 0; overflow: hidden; }
+      .sl-row > div:first-child { display: grid; gap: .125rem; }
+      .sl-sample-text { overflow-wrap: anywhere; }
+      /* ---- Layout, drawn: redlines (a measure's dimension line, in the red design tools use), a to-scale
+         artboard, a breakpoint ruler and actual-size tiles ---- */
+      .sl-layout-story { max-width: 60rem; margin: 0 0 1rem; }
+      .sl-fig { margin: 2.5rem 0 0; }
+      .sl-fig-name { margin: 2.5rem 0 .75rem; color: #6b7280; font-family: var(--bb-text, system-ui, sans-serif); font-size: .75rem; line-height: 1.3; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; }
+      .sl-fig > .sl-fig-name { margin-top: 0; }
+      .sl-fig figcaption { margin-top: 1.75rem; }
+      .sl-dim { --sl-red: #e5484d; position: absolute; z-index: 1; display: block; height: 0; border-top: 1px solid var(--sl-red); }
+      .sl-dim::before, .sl-dim::after { content: ""; position: absolute; top: -5px; width: 1px; height: 9px; background: var(--sl-red); }
+      .sl-dim::before { left: 0; }
+      .sl-dim::after { right: 0; }
+      .sl-dim > span { position: absolute; top: 0; left: 50%; transform: translate(-50%, -50%); padding: 0 .3rem; border-radius: 3px; background: var(--sl-red); color: #fff; font: 600 .6875rem/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: nowrap; }
+      .sl-dim--v { top: 0; bottom: 0; width: 0; height: auto; border-top: 0; border-left: 1px solid var(--sl-red); }
+      .sl-dim--v::before, .sl-dim--v::after { left: -4px; width: 9px; height: 1px; }
+      .sl-dim--v::before { top: 0; }
+      .sl-dim--v::after { top: auto; bottom: 0; }
+      .sl-dim--soft { --sl-red: #9ca3af; border-top-style: dashed; }
+      .sl-dim--soft > span { border: 1px solid #d1d5db; background: #fff; color: #6b7280; font-weight: 400; }
+      .sl-art { position: relative; overflow: hidden; border: 1px solid #d4d4d8; border-radius: 4px; background: #fff; box-shadow: 0 1px 2px rgba(0, 0, 0, .05), 0 10px 30px rgba(0, 0, 0, .06); }
+      .sl-art-header { position: absolute; top: 0; left: 0; right: 0; background: var(--bb-ink, #1a1a1a); color: var(--bb-paper, #fff); }
+      .sl-art-label { position: absolute; top: 50%; transform: translateY(-50%); font: 600 .6875rem/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .04em; white-space: nowrap; opacity: .85; }
+      .sl-art-margin { position: absolute; bottom: 0; left: 0; }
+      .sl-art-margin > .sl-dim, .sl-art-cdim { top: 16%; left: 0; right: 0; }
+      .sl-art-container { position: absolute; bottom: 0; border-inline: 1px dashed color-mix(in srgb, var(--bb-accent, #2563eb) 70%, #000); }
+      .sl-art-gutter { position: absolute; top: 0; bottom: 0; background: rgba(229, 72, 77, .13); }
+      .sl-art-gutter > .sl-dim { top: 68%; left: 0; right: 0; }
+      .sl-art-content { position: absolute; top: 0; bottom: 0; }
+      .sl-art-content i { position: absolute; left: 0; display: block; border-radius: 2px; background: color-mix(in srgb, var(--bb-ink, #1a1a1a) 10%, #fff); }
+      .sl-art-content .sl-art-k { top: 30%; width: 14%; height: 2.5%; background: color-mix(in srgb, var(--bb-accent, #2563eb) 55%, #fff); }
+      .sl-art-content .sl-art-h { top: 35.5%; width: 46%; height: 7%; background: color-mix(in srgb, var(--bb-ink, #1a1a1a) 28%, #fff); }
+      .sl-art-content .sl-art-t { top: 46%; width: 34%; height: 2.5%; }
+      .sl-art-content .sl-art-c1, .sl-art-content .sl-art-c2 { top: 56%; bottom: 9%; width: 48.5%; }
+      .sl-art-content .sl-art-c2 { left: auto; right: 0; }
+      .sl-art-total { position: relative; margin-top: 1.25rem; }
+      .sl-legend { display: grid; grid-template-columns: minmax(10rem, 15rem) minmax(0, 1fr); gap: 0 1.5rem; margin: 0; font-size: .875rem; line-height: 1.5; }
+      .sl-legend > * { padding: .5rem 0; border-top: 1px solid #eee; }
+      .sl-legend dt { font-weight: 600; }
+      .sl-legend dt span { display: block; color: #e5484d; font: 600 .75rem/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; }
+      .sl-legend dd { margin: 0; color: #4b5563; }
+      .sl-ruler-marks, .sl-ruler-devices { position: relative; height: 2.75rem; }
+      .sl-ruler-bar { position: relative; height: 3.25rem; overflow: hidden; border: 1px solid #d4d4d8; border-radius: 3px; background: #fff; }
+      .sl-ruler-bar::after { content: ""; position: absolute; inset: auto 0 0; height: 6px; background: repeating-linear-gradient(to right, #9ca3af 0 1px, transparent 1px var(--tick)); }
+      .sl-range { position: absolute; top: 0; bottom: 0; display: grid; place-content: center; justify-items: center; gap: .2rem; overflow: hidden; background: color-mix(in srgb, var(--bb-accent, #2563eb) 14%, #fff); color: #374151; font: 600 .75rem/1 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: nowrap; }
+      .sl-range b { color: var(--bb-ink, #1a1a1a); font: 600 .8125rem/1 var(--bb-text, system-ui, sans-serif); }
+      .sl-range[data-alt="1"] { background: color-mix(in srgb, var(--bb-accent, #2563eb) 30%, #fff); }
+      .sl-ruler-line { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--bb-ink, #1a1a1a); }
+      .sl-mark { position: absolute; bottom: 0; width: 0; height: 1.375rem; border-left: 1px solid var(--bb-ink, #1a1a1a); }
+      .sl-mark[data-row="1"] { height: 2.75rem; }
+      .sl-mark > span { position: absolute; top: 0; left: .375rem; color: #374151; font-size: .75rem; line-height: 1.1; white-space: nowrap; }
+      .sl-mark[data-edge="end"] > span { left: auto; right: .375rem; }
+      .sl-mark b { color: var(--bb-ink, #1a1a1a); font-weight: 600; }
+      .sl-ruler-devices .sl-mark { top: 0; bottom: auto; border-left: 1px dashed #9ca3af; }
+      .sl-ruler-devices .sl-mark > span { top: auto; bottom: 0; display: inline-flex; align-items: center; gap: .375rem; color: #6b7280; }
+      .sl-device { display: inline-block; border: 1.5px solid currentColor; border-radius: 2px; }
+      .sl-device--phone { width: 7px; height: 12px; }
+      .sl-device--tablet { width: 10px; height: 13px; }
+      .sl-device--laptop { width: 15px; height: 10px; border-bottom-width: 3px; }
+      .sl-device--desktop { width: 17px; height: 12px; }
+      .sl-measures { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 1rem; }
+      .sl-measure { margin: 0; overflow: hidden; border: 1px solid #e5e5e5; border-radius: 6px; }
+      .sl-measure-stage { display: grid; place-items: center; min-height: 9rem; padding: 1.5rem 1.25rem; background: #fafafa radial-gradient(#d4d4d8 1px, transparent 1px) 0 0 / 8px 8px; }
+      .sl-measure figcaption { display: grid; gap: .2rem; padding: .75rem .875rem .875rem; border-top: 1px solid #e5e5e5; font-size: .875rem; }
+      .sl-measure-val { color: #e5484d; font: 600 .75rem/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; }
+      .sl-measure-note { color: #4b5563; font-size: .8125rem; line-height: 1.45; }
+      .sl-measure-fluid { font: .8125rem/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; color: #374151; overflow-wrap: anywhere; }
+      .sl-m-height, .sl-m-width, .sl-m-gap > i { border: 1px solid color-mix(in srgb, var(--bb-ink, #1a1a1a) 28%, #fff); border-radius: 3px; background: color-mix(in srgb, var(--bb-ink, #1a1a1a) 10%, #fff); }
+      .sl-m-height { position: relative; width: 100%; }
+      .sl-m-height > .sl-dim--v { left: .75rem; }
+      .sl-m-width { position: relative; height: 2.5rem; }
+      .sl-m-width > .sl-dim { top: -.75rem; left: 0; right: 0; }
+      .sl-m-pad { border: 1px dashed #e5484d; border-radius: 4px; background: rgba(229, 72, 77, .16); }
+      .sl-m-pad > span { display: block; padding: .5rem .75rem; border: 1px solid #d4d4d8; border-radius: 2px; background: #fff; color: #6b7280; font-size: .75rem; }
+      .sl-m-gap { display: flex; height: 3.5rem; }
+      .sl-m-gap > i { width: 3rem; }
+      .sl-m-gap > span { position: relative; background: rgba(229, 72, 77, .16); }
+      .sl-m-gap .sl-dim { top: 50%; left: 0; right: 0; }
+      .sl-box { width: 96px; height: 56px; background: #f5f5f5; border: 1px solid #ccc; }
+      .sl-icons { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: .5rem; margin: 0; padding: 0; list-style: none; }
+      .sl-icons li { display: grid; justify-items: center; gap: .5rem; padding: .875rem .375rem .625rem; border: 1px solid #e5e5e5; border-radius: 6px; }
+      .sl-formcard { max-width: 720px; padding: 1.5rem; border-radius: 6px; background: #f6f7f9; }
+      /* a live component's frame: the containing block of anything fixed or sticky inside it */
+      .sl-stage { position: relative; transform: translateZ(0); overflow: clip; border: 1px solid #e5e5e5; border-radius: 6px; }
+      .sl-form-guard { min-inline-size: 0; margin: 0; padding: 0; border: 0; }
+      .sl-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(1px, 1px, 1px, 1px); white-space: nowrap; }
+      /* the appendix */
+      .sl-appendix { margin-top: 5rem; padding-top: 1.5rem; border-top: 4px double #d1d5db; }
+      .sl-appendix-label { margin: 0; color: #6b7280; font-size: .75rem; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; }
+      .sl-appendix .sl-h2:first-of-type { margin-top: 1rem; }
+      .sl-toolbar { display: flex; gap: .5rem; margin: 0 0 .5rem; }
+      .sl-toolbar button { padding: .3rem .75rem; border: 1px solid #d1d5db; border-radius: 4px; background: #fff; font: inherit; font-size: .8125rem; cursor: pointer; }
+      .sl-block, .sl-ref { margin: .5rem 0; border: 1px solid #e5e5e5; border-radius: 8px; background: #fff; }
+      .sl-block > summary, .sl-ref > summary { display: flex; flex-wrap: wrap; gap: .125rem 1rem; align-items: baseline; padding: .75rem 1rem; cursor: pointer; list-style: none; }
+      .sl-block > summary::-webkit-details-marker, .sl-ref > summary::-webkit-details-marker { display: none; }
+      .sl-block > summary::before, .sl-ref > summary::before { content: "▸"; width: 1em; color: #6b7280; }
+      .sl-block[open] > summary::before, .sl-ref[open] > summary::before { content: "▾"; }
+      .sl-block[open] > summary, .sl-ref[open] > summary { border-bottom: 1px solid #eee; }
+      .sl-block-name { font: 600 .9375rem/1.3 ui-monospace, SFMono-Regular, Menlo, monospace; }
+      .sl-block-desc { color: #555; font-size: .875rem; }
+      .sl-block-meta { margin: .75rem 1rem; font-size: .8125rem; color: #555; overflow-wrap: anywhere; }
+      .sl-block > .sl-stage { margin: 0 1rem 1rem; }
+      .sl-ref > :not(summary) { margin: .75rem 1rem 1rem; }
+      /* one track that can shrink: a nowrap class sample (.pill, a marquee track) widened the appendix
+         148px past a phone (go.hilley-solis.com, noonanelectricalservices.com) */
+      .sl-classes { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; }
+      .sl-class { min-width: 0; border: 1px solid #e5e5e5; border-radius: 6px; }
+      .sl-class > .sl-code { display: block; padding: .5rem .75rem; border-bottom: 1px solid #e5e5e5; background: #fafafa; }
+      .sl-frame { position: relative; transform: translateZ(0); overflow: hidden; max-height: 320px; padding: 1rem; }
+      .sl-omit { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: .875rem; }
+      .sl-omit td { padding: .5rem; border-bottom: 1px solid #eee; vertical-align: top; overflow-wrap: break-word; }
+      @media (max-width: 900px) {
+        .sl { grid-template-columns: minmax(0, 1fr); }
+        .sl-nav { z-index: 10; display: flex; gap: .25rem; height: auto; padding: .5rem; overflow-x: auto; white-space: nowrap; border-right: 0; border-bottom: 1px solid #e5e5e5; }
+        .sl-nav-label, .sl-nav-sub { display: none; }
+        .sl-main { padding: 1.25rem 1rem 4rem; }
+        .bb { margin: -1.25rem -1rem 0; }
+        .bb-cover-mark { position: static; justify-self: start; }
+        .bb-dot-rows { max-width: none; }
+        .bb-dot-row { grid-template-columns: minmax(0, 1fr); gap: .375rem; }
+        .bb-swatch-chip { height: 7rem; }
+        /* a phone shows each level scaled to fit; the spec line keeps the real size */
+        .bb-hier-sample { font-size: min(var(--bb-fs, 1em), 10vw) !important; line-height: 1.15 !important; }
+        .bb-hier li { grid-template-columns: minmax(0, 1fr); }
+        .bb-hier .bb-small { grid-column: 1; }
+        .sl-main section, .sl-h3, .sx, .bb-chapter { scroll-margin-top: 3.5rem; }
+        .sl-row { grid-template-columns: minmax(0, 1fr); }
+        .sl-legend { grid-template-columns: minmax(0, 1fr); }
+        .sl-legend dd { padding-top: 0; border-top: 0; }
+      }
+      /* a phone: the drawings keep their lines, the legend carries the numbers too small to label */
+      @media (max-width: 600px) {
+        .sl-art-gutter > .sl-dim > span, .sl-art-margin .sl-dim > span, .sl-range { font-size: 0; padding: 0; }
+        .sl-mark > span { font-size: .6875rem; }
+        .sl-range b { font-size: .6875rem; }
+        .sl-device-name { display: none; }
+      }
+    </style>
+    <style>
+      /* Discover Pluto's curated slots. The wordmark is the header's .brand class, which takes its size and
+         weight from global.css and its white from the header, so here it takes the figure's color. */
+      .sl-wordmark { color: inherit; }
+      .sl-row-note { display: block; color: #6b7280; font-size: .75rem; }
+      .sl-type-ground { padding: 1rem 1.25rem; }
+      .sl-type-ground .hero-tagline { margin: 0; }
+      .sl-shape-stage { display: flex; flex-wrap: wrap; align-items: center; gap: 1.25rem; padding: 1.25rem; }
+      .sl-shape-cap { max-width: 60ch; margin: 0; color: #4b5563; font-size: .875rem; }
+    </style>
+    <style is:global>
+      /* global.css styles the bare figcaption (gray, smaller), table (a margin) and th / td (gray borders,
+         a tinted header) for the site's pages, and those rules reached the book's own captions and tables:
+         the wordmark's caption went gray on the dark tile, and the swatch captions, the token tables and
+         the explorer's tables changed. Put them back to the browser's defaults inside the book, at the
+         lowest specificity that beats the bare rules, so every template rule still wins. */
+      :where(.sl) figcaption { margin-top: 0; color: inherit; font-size: inherit; }
+      :where(.sl) table { margin: 0; }
+      :where(.sl) th, :where(.sl) td { border: 0; background: none; }
+    </style>
+    <style is:global>
+      /* anchors stop below the editor's admin bar (0 when no editor is signed in) */
+      html { scroll-padding-top: var(--blink-topbar-height, 0px); }
+      /* a site's body { overflow-x: hidden } (with html { overflow-x: clip }) makes body a scroll
+         container, and the contents sidebar stopped sticking (theloop.fm) */
+      body { overflow-x: visible; }
+      /* a site's bare button and li rules reached the book's controls and lists: uppercase explorer
+         buttons, list bullets stripped (minimalchaosweb.com); zero specificity, so any template class wins */
+      :where(.sl) button { text-transform: none; letter-spacing: normal; }
+      :where(.sl) li { list-style-type: revert; }
+      /* ---- the component explorer: global, as its panels are built in the browser ---- */
+      .sx { display: grid; grid-template-columns: 14rem minmax(0, 1fr); margin-top: 1rem; overflow: hidden; border: 1px solid #e5e5e5; border-radius: 8px; background: #fff; }
+      .sx-side { max-height: 56rem; overflow-y: auto; padding: .75rem; border-right: 1px solid #e5e5e5; background: #fafafa; }
+      .sx-search { box-sizing: border-box; width: 100%; padding: .45rem .625rem; border: 1px solid #d1d5db; border-radius: 6px; background: #fff; font: inherit; font-size: .8125rem; }
+      .sx-group-name { margin: 1rem .25rem .25rem; color: #6b7280; font-size: .6875rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
+      .sx-entry-name { display: block; width: 100%; margin: .5rem 0 .125rem; padding: .25rem; border: 0; border-radius: 4px; background: none; color: inherit; font: inherit; font-size: .875rem; font-weight: 600; text-align: left; cursor: pointer; }
+      .sx-entry-name:hover, .sx-entry-name.is-current { background: color-mix(in srgb, var(--bb-accent, #1d4ed8) 20%, #fff); }
+      .sx-story { display: block; padding: .3rem .5rem .3rem 1rem; border-radius: 4px; color: #374151; font-size: .8125rem; text-decoration: none; }
+      .sx-story:hover { background: #eef0f3; }
+      .sx-story.is-current { background: color-mix(in srgb, var(--bb-accent, #1d4ed8) 20%, #fff); color: var(--bb-ink, #111); font-weight: 600; }
+      .sx-main { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; align-content: start; }
+      .sx-main > * { min-width: 0; }
+      .sx-head { padding: 1rem 1.25rem .75rem; border-bottom: 1px solid #eee; }
+      .sx-crumb { margin: 0; color: #6b7280; font-size: .75rem; }
+      .sx-title { margin: .125rem 0 0; color: inherit; font: 400 1.625rem/1.2 var(--bb-display, Georgia, serif); letter-spacing: normal; text-transform: none; }
+      .sx-desc { max-width: 72ch; margin: .375rem 0 0; color: #4b5563; font-size: .875rem; line-height: 1.5; }
+      .sx-desc:empty { display: none; }
+      .sx-toolbar { display: flex; flex-wrap: wrap; gap: .5rem 1rem; align-items: center; padding: .5rem 1.25rem; border-bottom: 1px solid #eee; background: #fafafa; font-size: .8125rem; }
+      .sx-seg { display: inline-flex; overflow: hidden; border: 1px solid #d1d5db; border-radius: 6px; }
+      .sx-seg button { padding: .3rem .625rem; border: 0; border-right: 1px solid #d1d5db; background: #fff; color: #111; font: inherit; cursor: pointer; }
+      .sx-seg button:last-child { border-right: 0; }
+      .sx-seg button span { margin-left: .3rem; color: #9ca3af; font-size: .6875rem; }
+      .sx-seg button[aria-pressed="true"] { background: var(--bb-ink, #111); color: var(--bb-paper, #fff); }
+      .sx-seg button[aria-pressed="true"] span { color: inherit; opacity: .7; }
+      .sx-bgs { display: inline-flex; flex-wrap: wrap; align-items: center; gap: .3rem; }
+      .sx-tool-label { margin-right: .2rem; color: #6b7280; }
+      .sx-bg { width: 1.375rem; height: 1.375rem; padding: 0; border: 1px solid rgba(0, 0, 0, .2); border-radius: 50%; cursor: pointer; }
+      .sx-bg--none { background: linear-gradient(135deg, #fff 44%, #e5484d 44% 56%, #fff 56%); }
+      .sx-bg[aria-pressed="true"] { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--bb-ink, #111); }
+      .sx-scale { color: #6b7280; font-size: .75rem; }
+      .sx-open { margin-left: auto; color: #374151; }
+      .sx-canvas { display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-start; gap: 1.5rem; min-height: 10rem; padding: 1.25rem; overflow: hidden; background: #f3f4f6 radial-gradient(#d4d4d8 1px, transparent 1px) 0 0 / 12px 12px; }
+      .sx-frame-wrap { position: relative; overflow: hidden; background: #fff; box-shadow: 0 1px 2px rgba(0, 0, 0, .06), 0 8px 24px rgba(0, 0, 0, .08); }
+      /* a site's bare iframe { max-width: 100% } squeezed a 1440px frame to the panel (minimalchaosweb.com) */
+      .sx-frame { display: block; max-width: none; border: 0; transform-origin: 0 0; }
+      .sx-cell { display: grid; gap: .5rem; justify-items: start; margin: 0; }
+      .sx-cell-name { color: #4b5563; font-size: .6875rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
+      .sx-tabs { display: flex; gap: .25rem; padding: 0 1rem; border-top: 1px solid #e5e5e5; border-bottom: 1px solid #e5e5e5; }
+      .sx-tabs button { padding: .625rem .75rem; border: 0; border-bottom: 2px solid transparent; background: none; color: #6b7280; font: inherit; font-size: .8125rem; font-weight: 600; cursor: pointer; }
+      .sx-tabs button[aria-selected="true"] { border-bottom-color: var(--bb-accent, #1d4ed8); color: var(--bb-ink, #111); }
+      .sx-panel { min-height: 8rem; overflow-x: auto; padding: 1rem 1.25rem 1.25rem; font-size: .875rem; }
+      .sx-table { width: 100%; border-collapse: collapse; }
+      .sx-table th { padding: .375rem .5rem; border-bottom: 1px solid #e5e5e5; color: #6b7280; font-size: .6875rem; font-weight: 600; letter-spacing: .06em; text-align: left; text-transform: uppercase; }
+      .sx-table tbody th { width: 12rem; color: #111; font-size: .8125rem; letter-spacing: 0; text-transform: none; }
+      .sx-table td { padding: .5rem; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
+      .sx-table code, .sx-code { font: .75rem/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; }
+      .sx-table input[type="text"], .sx-table select { box-sizing: border-box; width: 100%; max-width: 22rem; padding: .35rem .5rem; border: 1px solid #d1d5db; border-radius: 4px; font: inherit; }
+      .sx-note { margin: .75rem 0 0; color: #6b7280; font-size: .8125rem; }
+      .sx-codebox { position: relative; }
+      .sx-code { margin: 0; padding: 1rem 5rem 1rem 1rem; overflow-x: auto; border-radius: 6px; background: #111827; color: #e5e7eb; font-size: .8125rem; white-space: pre-wrap; word-break: break-word; }
+      .sx-copy { position: absolute; top: .5rem; right: .5rem; padding: .25rem .625rem; border: 1px solid #4b5563; border-radius: 4px; background: #1f2937; color: #e5e7eb; font: inherit; font-size: .75rem; cursor: pointer; }
+      .sx-used { margin: 0; padding-left: 1.2em; line-height: 1.8; }
+      @media (max-width: 900px) {
+        .sx { grid-template-columns: minmax(0, 1fr); }
+        .sx-side { max-height: 15rem; border-right: 0; border-bottom: 1px solid #e5e5e5; }
+        .sx-canvas { padding: .75rem; }
+        .sx-open { margin-left: 0; }
+      }
+      /* a phone: the device switch drops its widths so it fits beside the background swatches */
+      @media (max-width: 600px) {
+        .sx-seg button span { display: none; }
+      }
+    </style>
+  </head>
+  <!-- out of the site's search: a site that runs Pagefind after its build would put this editor-only
+       page in its public index (cascade-partners: 80 design-system pages, 2026-11-03) -->
+  <body data-pagefind-ignore="all">
+    <div class="sl" style={`--bb-display:${bbDisplay};--bb-text:${bbText};--bb-ink:${bbInk};--bb-paper:${bbPaper};--bb-accent:${bbAccent}`}>
+      <nav class="sl-nav" aria-label="Design system contents">
+        <a class="sl-nav-home" href="#top">{siteName}</a>
+        {nav.map(([label, items]) => (
+          <Fragment>
+            <p class="sl-nav-label">{label}</p>
+            {items.map(([id, text]) => (
+              <Fragment>
+                <a href={`#${id}`} data-sl-nav={id}>{text}</a>
+                {id === "blocks" && slBlockGroups.length > 0 && <div class="sl-nav-sub">{slBlockGroups.map(([g, l]) => <a href={`#${g}`}>{l}</a>)}</div>}
+              </Fragment>
+            ))}
+          </Fragment>
+        ))}
+      </nav>
+
+      <main class="sl-main" id="top">
+
+        {/* ========================================== THE BOOK, in DESIGN.md's order (generated) == */}
+        <article class="bb" aria-label="Brand book and design system">
+          <header class="bb-cover" id="cover">
+            <p class="bb-kicker">Brand book · Design system</p>
+            <h1 class="bb-title">{siteName}</h1>
+            {textOf(design, "description") && <p class="bb-cover-lede">{textOf(design, "description")}</p>}
+            <div class="bb-dot-rows">{coverRows.map(([label, cs], i) => (
+              <div class={i === 0 ? "bb-dot-row bb-dot-row--lead" : "bb-dot-row"}><p class="bb-dot-label">{label === "Brand" ? label : `${label}s`}</p><ul class="bb-dots" aria-label={`${label} colors`}>{cs.map((c) => <li style={`background:${c.hex}`} title={titleCase(c.name)} />)}</ul></div>
+            ))}</div>
+            {coverMark && <img class={coverMarkClass} src={coverMark.src} alt="" width="72" height="72" />}
+          </header>
+          {!designSrc ? (
+            <p class="sl-note sl-note--alert bb-alert">No <code>DESIGN.md</code> at the repo root yet, so this book falls back to the raw tokens. Write it from the scaffold's template (style-library.md §2b).</p>
+          ) : drift.length > 0 ? (
+            <div class="sl-note sl-note--alert bb-alert" role="status"><strong>DESIGN.md and tokens.css disagree.</strong> Fix one to match the other:<ul>{drift.map((d) => <li><code>{d}</code></li>)}</ul></div>
+          ) : null}
+          <div class="bb-intro">
+            {overview.length > 0 && <Fragment><p class="bb-label">Overview</p><div class="bb-prose" set:html={proseHtml(overview)} /></Fragment>}
+            <p class="bb-source">
+              Generated from <code>DESIGN.md</code>, the design spec at the root of the site's code, and from the code itself: in
+              DESIGN.md's order, in the site's own fonts and colors. Each chapter opens with the spec's own words. "For developers",
+              at the foot of a chapter, gives its tokens and classes, and the appendix lists all of them.{designSrc && drift.length === 0 && " DESIGN.md and tokens.css are in step."}
+            </p>
+          </div>
+
+          <section class="bb-chapter" id="logo">
+            <header class="bb-divider" style={`background:${bbAccent};color:${bbInk}`}><span class="bb-num">01</span><h2 class="bb-h">Logo &amp; icon</h2></header>
+            {logoStory.length > 0 && <div class="bb-story"><div class="bb-prose" set:html={proseHtml(logoStory)} /></div>}
+            <div class="bb-marks">
+              {marks.map((m) => (
+                <figure class:list={["bb-mark", m.small && "bb-mark--small"]} style={m.ground === "ink" ? `background:${bbInk};color:${bbPaper};color-scheme:dark` : `background:${bbPaper};color:${bbInk};color-scheme:light`}>
+                  <img src={m.src} alt="" loading="lazy" />
+                  <figcaption>{m.icon ? "Site icon · the browser tab and a phone's home screen" : `${m.name} · on ${groundName(m.ground)}`}</figcaption>
+                </figure>
+              ))}
+              {/* sl:logos — the site's logo variants (the header logo, a light / dark version, the icon), each a
+                    <figure class="bb-mark" style="background:…"><img or <Logo /> /><figcaption>Primary logo · on Cream</figcaption></figure>
+                    with one line on when to use it. Render the real component or file, never a redrawn copy. */}
+              {/* the site has no logo file or icon: its mark is the header's wordmark, the global .brand class */}
+              <figure class="bb-mark" style="background:var(--space-black);color:var(--paper);color-scheme:dark">
+                <span class="brand sl-wordmark">Discover&nbsp;Pluto</span>
+                <figcaption>Wordmark · on Space Black, in the header of every page. The site's only mark</figcaption>
+              </figure>
+            </div>
+            {marksMore.length > 0 && <p class="bb-footnote">Also in the brand files: {marksMore.join(", ")}.</p>}
+          </section>
+
+          <section class="bb-chapter" id="colors">
+            <header class="bb-divider" style={`background:${bbInk};color:${bbPaper}`}><span class="bb-num">02</span><h2 class="bb-h">Color</h2></header>
+            {colorStory.length > 0 && <div class="bb-story"><div class="bb-prose" set:html={proseHtml(colorStory)} /></div>}
+            {brandColors.length > 0 ? (
+              <Fragment>
+                <div class="bb-palette">
+                  {brandColors.map((c) => (
+                    <figure class="bb-swatch">
+                      <div class="bb-swatch-chip" style={`background:${c.hex}`} />
+                      <figcaption>
+                        <p class="bb-swatch-name">{titleCase(c.name)}{c.roles.length > 0 && <span class="bb-swatch-role"> · {c.roles.map(titleCase).join(" · ")}</span>}</p>
+                        {c.note && <p class="bb-swatch-note">{plainNote(c.note)}</p>}
+                        <dl class="bb-codes">
+                          <dt>HEX</dt><dd>{c.hex.toUpperCase()}</dd>
+                          <dt>RGB</dt><dd>{c.rgb.join(", ")}</dd>
+                          <dt>CMYK</dt><dd>{c.cmyk.join(", ")}</dd>
+                        </dl>
+                      </figcaption>
+                    </figure>
+                  ))}
+                </div>
+                <p class="bb-footnote">Screens use HEX and RGB. CMYK is a straight conversion for print: confirm it on a proof, or match a Pantone, before a print run.</p>
+              </Fragment>
+            ) : (
+              <div class="bb-body">
+                <div class="sl-swatches">
+                  {palette.map((c) => (
+                    <figure class="sl-swatch">
+                      <div class="sl-chip"><span style={`background:${c.prop ? `var(${c.prop})` : c.value}`} /></div>
+                      <figcaption><strong>{c.name}</strong><code class="sl-code">{c.value}</code>{c.note && <span class="sl-role">{c.note}</span>}</figcaption>
+                    </figure>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div class="bb-pair-cols">
+              <div>
+                <p class="bb-label">{pairsInUse.length ? "Pairs in use" : "Do"}</p>
+                <p class="bb-small">{pairsInUse.length ? "Every text-on-color pair the site uses, with its contrast. WCAG AA asks 4.5:1 of body text and 3:1 of large text." : "Text in one brand color on another, with enough contrast to read (WCAG AA, 4.5:1 and up)."}</p>
+                <ul class="bb-pairs">
+                  {pairsInUse.length > 0
+                    ? pairsInUse.map((p) => <li style={`background:${p.bg};color:${p.label}`}><b style={`color:${p.fg}`}>Aa</b><span class="bb-pair-name">{titleCase(p.n)}</span><span>{p.fgName} on {p.bgName}</span><span>{verdictOf(p.ratio)}</span></li>)
+                    : dos.map((p) => <li style={`background:${p.ground.hex};color:${p.ink.hex}`}><b>Aa</b><span>{titleCase(p.ink.name)} on {titleCase(p.ground.name)}</span><span>{p.ratio.toFixed(1)}:1</span></li>)}
+                </ul>
+              </div>
+              <div>
+                <p class="bb-label">Don't</p>
+                <p class="bb-small">Brand colors too close in lightness to carry text (under 3:1): never set one on the other.</p>
+                <ul class="bb-pairs bb-pairs--dont">{donts.map((p) => <li style={`background:${p.ground.hex};color:${p.ink.hex}`}><b>Aa</b><span>{titleCase(p.ink.name)} on {titleCase(p.ground.name)}</span><span>{p.ratio.toFixed(1)}:1</span></li>)}</ul>
+              </div>
+            </div>
+            <details class="bb-dev">
+              <summary>For developers<span>the color tokens</span></summary>
+              <div class="bb-dev-scroll">
+                <table class="bb-dev-table">
+                  <thead><tr><th>DESIGN.md</th><th>Token</th><th>Value</th><th>Role</th></tr></thead>
+                  <tbody>{palette.map((c) => <tr><td><span class="bb-dev-chip" style={`background:${c.prop ? `var(${c.prop})` : c.value}`} />{c.name}</td><td>{c.prop ? <code>{c.prop}</code> : "—"}</td><td><code>{c.value}</code></td><td>{c.note}</td></tr>)}</tbody>
+                </table>
+              </div>
+              {designSrc && undocumented.length > 0 && <p class="sl-note">In tokens.css but not DESIGN.md: <code>{undocumented.join(", ")}</code>. Document each, or remove it if nothing uses it.</p>}
+            </details>
+          </section>
+
+          <section class="bb-chapter" id="typography">
+            <header class="bb-divider" style={`background:${bbAccent};color:${bbInk}`}><span class="bb-num">03</span><h2 class="bb-h">Typography</h2></header>
+            {typeStory.length > 0 && <div class="bb-story"><div class="bb-prose" set:html={proseHtml(typeStory)} /></div>}
+            <p class="bb-label bb-inset" style="margin-top:clamp(2.5rem, 5vw, 4rem)">Hierarchy</p>
+            {typeLevels.length > 0 ? (
+              <ol class="bb-hier">
+                {typeLevels.map(([n, p]) => (
+                  <li>
+                    <p class="bb-hier-label">{titleCase(n)}<span>{familyOf(p)} · {[p.fontSize, p.lineHeight].filter(Boolean).join(" / ")}{p.fontWeight && ` · ${p.fontWeight}`}</span></p>
+                    <p class="bb-hier-sample" style={bbSampleStyle(p)}>The quick brown fox jumps over the lazy dog</p>
+                    {typeNotes.get(n) && <p class="bb-small">{plainNote(typeNotes.get(n))}</p>}
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <div class="bb-body">
+                <div class="sl-rows">
+                  {byKind.get("size")!.map((t) => (
+                    <div class="sl-row">
+                      <div><code class="sl-code">{t.name}</code><code class="sl-code">{t.value}</code></div>
+                      <div class="sl-sample-text" style={`font-size:var(${t.name});line-height:1.2`}>The quick brown fox</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {families.map((f, i) => (
+              <article class="bb-specimen" style={`background:${i % 2 ? bbAccent : bbInk};color:${i % 2 ? bbInk : bbPaper}`}>
+                <p class="bb-specimen-name" style={`font-family:${f.stack}`}>{f.family}</p>
+                <p class="bb-specimen-glyphs" style={`font-family:${f.stack}`}>ABCDEFGHIJKLMNOPQRSTUVWXYZ<br />abcdefghijklmnopqrstuvwxyz<br />0123456789 &amp; ? ! @ # % ( ) “ ”</p>
+                <div class="bb-specimen-cols">
+                  <div>
+                    <p class="bb-label">Weights</p>
+                    <ul class="bb-weights">{[...f.weights].sort().map((w) => <li style={`font-family:${f.stack};font-weight:${w}`}>{w} — The quick brown fox</li>)}</ul>
+                  </div>
+                  <div>
+                    <p class="bb-label">Sets</p>
+                    <ul class="bb-usage">{f.roles.map((r) => <li><strong>{titleCase(r.name)}</strong> · {[r.p.fontSize, r.p.fontWeight].filter(Boolean).join(" · ")}</li>)}</ul>
+                  </div>
+                </div>
+              </article>
+            ))}
+            <details class="bb-dev">
+              <summary>For developers<span>the type tokens and text classes</span></summary>
+              <div class="bb-dev-scroll">
+                <table class="bb-dev-table">
+                  <thead><tr><th>Level</th><th>Token</th><th>Family</th><th>Size / line</th><th>Weight</th><th>Tracking</th></tr></thead>
+                  <tbody>{typeLevels.map(([n, p]) => <tr><td>{n}</td><td>{tokenOf(live, "fontSize", n) ? <code>{tokenOf(live, "fontSize", n)}</code> : "—"}</td><td>{familyOf(p)}</td><td>{[p.fontSize, p.lineHeight].filter(Boolean).join(" / ")}</td><td>{p.fontWeight ?? ""}</td><td>{p.letterSpacing ?? ""}</td></tr>)}</tbody>
+                </table>
+              </div>
+              {fonts.length > 0 && (
+                <div class="bb-dev-scroll">
+                  <table class="bb-dev-table">
+                    <thead><tr><th>Family token</th><th>Stack</th></tr></thead>
+                    <tbody>{fonts.map((t) => <tr><td><code>{t.name}</code></td><td><code>{t.value}</code></td></tr>)}</tbody>
+                  </table>
+                </div>
+              )}
+              {/* sl:typography — the site's heading and text classes, under an <h3 class="sl-fig-name">, one row each:
+                    <div class="sl-row"><code class="sl-code">.section-h2</code><h2 class="section-h2">Sample heading</h2></div> */}
+              <h3 class="sl-fig-name">Text classes</h3>
+              <div class="sl-rows">
+                <div class="sl-row"><div><code class="sl-code">.brand</code><span class="sl-row-note">the wordmark, on {tok("--space-black")}</span></div><div class="sl-type-ground" style="background:var(--space-black);color:var(--paper)"><span class="brand">Sample Name</span></div></div>
+                <div class="sl-row"><div><code class="sl-code">.hero-tagline</code><span class="sl-row-note">the hero's welcome line, on {tok("--space-deep")}</span></div><div class="sl-type-ground" style="background:var(--space-deep)"><p class="hero-tagline">A one-line welcome in sample copy.</p></div></div>
+                <div class="sl-row"><div><code class="sl-code">.year</code><span class="sl-row-note">a timeline's year, {tok("--accent-ink")}</span></div><div><span class="year">1930</span> Sample event copy.</div></div>
+              </div>
+            </details>
+          </section>
+
+          <section class="bb-chapter" id="layout">
+            <header class="bb-divider" style={`background:${bbInk};color:${bbPaper}`}><span class="bb-num">04</span><h2 class="bb-h">Layout</h2></header>
+            {layoutStory.length > 0 && <div class="bb-story"><div class="bb-prose" set:html={proseHtml(layoutStory)} /></div>}
+            <div class="bb-body">
+              {art && container && (
+                <figure class="sl-fig">
+                  <h3 class="sl-fig-name">Page grid · a {art.W}px desktop artboard, drawn to scale</h3>
+                  <div class="sl-art" style={`aspect-ratio:${art.W}/${art.H}`}>
+                    {headerBar && (
+                      <div class="sl-art-header" style={`height:${art.header}`}>
+                        <span class="sl-dim sl-dim--v" style={`left:calc(${art.side} / 2)`} />
+                        <span class="sl-art-label" style={`left:${art.side}`}>{headerBar.title} · {headerBar.value}</span>
+                      </div>
+                    )}
+                    <div class="sl-art-margin" style={`top:${art.header};width:${art.side}`}><span class="sl-dim sl-dim--soft"><span>auto</span></span></div>
+                    <div class="sl-art-container" style={`top:${art.header};left:${art.side};width:${art.width}`}>
+                      <span class="sl-dim sl-art-cdim"><span>{container.value}</span></span>
+                      {gutter && <div class="sl-art-gutter" style={`left:0;width:${art.gutter}`}><span class="sl-dim"><span>{gutter.px}</span></span></div>}
+                      {gutter && <div class="sl-art-gutter" style={`right:0;width:${art.gutter}`}><span class="sl-dim"><span>{gutter.px}</span></span></div>}
+                      <div class="sl-art-content" style={`left:${art.gutter};right:${art.gutter}`} aria-hidden="true"><i class="sl-art-k" /><i class="sl-art-h" /><i class="sl-art-t" /><i class="sl-art-c1" /><i class="sl-art-c2" /></div>
+                    </div>
+                  </div>
+                  <span class="sl-dim sl-art-total"><span>{art.W}px</span></span>
+                  <figcaption>
+                    <dl class="sl-legend">
+                      {[container, gutter, headerBar].filter((m): m is Measure => !!m).map((m) => (
+                        <Fragment><dt>{m.title}<span>{m.value}{pxNote(m)}</span></dt><dd>{m.note}</dd></Fragment>
+                      ))}
+                      <dt>Outer margin<span>auto</span></dt><dd>Whatever is left either side once the container stops growing ({art.margin}px each side on this artboard).</dd>
+                    </dl>
+                  </figcaption>
+                </figure>
+              )}
+              {bps.length > 0 && (
+                <figure class="sl-fig">
+                  <h3 class="sl-fig-name">Breakpoints · screen width 0 to {rulerMax}px, to scale</h3>
+                  <div class="sl-ruler" style={`--tick:${pct(100, rulerMax)}`}>
+                    <div class="sl-ruler-marks">
+                      {bps.map((b, i) => <span class="sl-mark" data-row={i % 2} data-edge={edgeOf(b.edge)} style={`left:${pct(b.edge, rulerMax)}`}><span>{namesUnder(b) || b.side === "from" ? `${b.px}px` : <Fragment><b>{b.title}</b> {b.px}</Fragment>}</span></span>)}
+                    </div>
+                    <div class="sl-ruler-bar">
+                      {rulerRanges.map((r, i) => <span class="sl-range" data-alt={i % 2} style={`left:${pct(r.from, rulerMax)};width:${pct(r.to - r.from, rulerMax)}`}>{r.name && <b>{r.name}</b>}{r.last ? `${r.from}+` : `${r.from}–${r.to - 1}`}</span>)}
+                      {bps.map((b) => <i class="sl-ruler-line" style={`left:${pct(b.edge, rulerMax)}`} />)}
+                    </div>
+                    <div class="sl-ruler-devices">
+                      {DEVICES.filter(([, , w]) => w <= rulerMax).map(([k, label, w], i) => <span class="sl-mark sl-mark--device" data-row={i % 2} data-edge={edgeOf(w)} style={`left:${pct(w, rulerMax)}`}><span><i class={`sl-device sl-device--${k}`} /><span class="sl-device-name">{label} </span>{w}</span></span>)}
+                    </div>
+                  </div>
+                  <figcaption>
+                    <dl class="sl-legend">
+                      {bps.map((b) => <Fragment><dt>{b.title}<span>{b.value}{pxNote(b)}</span></dt><dd>{b.note}</dd></Fragment>)}
+                    </dl>
+                    <p class="sl-hint">Above the ruler: the site's breakpoints. Below: common device widths, the artboards to design at.</p>
+                  </figcaption>
+                </figure>
+              )}
+              {actualSize.length > 0 && (
+                <Fragment>
+                  <h3 class="sl-fig-name">Sizes and spacing · actual size</h3>
+                  <div class="sl-measures">
+                    {actualSize.map((m) => {
+                      const s = fit(m), d = Math.round(m.px * s);
+                      const axis = padAxis(m.n);
+                      return (
+                        <figure class="sl-measure">
+                          <div class="sl-measure-stage">
+                            {!(m.px > 0) ? <span class="sl-measure-fluid">{m.value}</span>
+                              : m.kind === "height" ? <div class="sl-m-height" style={`height:${d}px`}><span class="sl-dim sl-dim--v" /></div>
+                              : m.kind === "pad" ? <div class="sl-m-pad" style={`padding:${axis === "y" ? `${d}px 0` : axis === "x" ? `0 ${d}px` : `${d}px`}`}><span>Content</span></div>
+                              : m.kind === "width" || m.kind === "container" ? <div class="sl-m-width" style={`width:${d}px`}><span class="sl-dim" /></div>
+                              : <div class="sl-m-gap"><i /><span style={`width:${d}px`}><span class="sl-dim" /></span><i /></div>}
+                          </div>
+                          <figcaption>
+                            <strong>{m.title}</strong> <span class="sl-measure-val">{m.value}{pxNote(m)}{s < 1 && ` · shown at 1:${Math.round(1 / s * 10) / 10}`}</span>
+                            {m.note && <span class="sl-measure-note">{m.note}</span>}
+                          </figcaption>
+                        </figure>
+                      );
+                    })}
+                  </div>
+                </Fragment>
+              )}
+            </div>
+            <details class="bb-dev">
+              <summary>For developers<span>the spacing tokens and the container class</span></summary>
+              <div class="bb-dev-scroll">
+                <table class="bb-dev-table">
+                  <thead><tr><th>DESIGN.md</th><th>Token</th><th>Value</th><th>Drawn as</th></tr></thead>
+                  <tbody>{measures.map((m) => <tr><td>{designSrc ? `spacing.${m.n}` : "—"}</td><td><code>{m.prop}</code></td><td><code>{m.value}</code></td><td>{KIND_LABEL[m.kind]}</td></tr>)}</tbody>
+                </table>
+              </div>
+              {/* sl:layout — the site's real container and grid classes, live (the drawings above are generated):
+                    <div class="sl-stage"><div class="container">…</div></div>, and how a row stacks at each breakpoint */}
+              <h3 class="sl-fig-name">The reading column</h3>
+              <p class="sl-note">The site has no container class and no grid. Every page's column is its <code>main</code> element, styled by that element's rule in global.css, and the header and footer are full-width bands. Nothing stacks: there are no breakpoints. Open any story in the Content group of the explorer to see a block in the real column.</p>
+            </details>
+          </section>
+
+          <section class="bb-chapter" id="depth">
+            <header class="bb-divider" style={`background:${bbAccent};color:${bbInk}`}><span class="bb-num">05</span><h2 class="bb-h">Depth &amp; shape</h2></header>
+            {(depthStory.length > 0 || shapeStory.length > 0) && (
+              <div class="bb-story bb-story--two">
+                {depthStory.length > 0 && <div><p class="bb-label">Depth</p><div class="bb-prose bb-prose--one" set:html={proseHtml(depthStory)} /></div>}
+                {shapeStory.length > 0 && <div><p class="bb-label">Shape</p><div class="bb-prose bb-prose--one" set:html={proseHtml(shapeStory)} /></div>}
+              </div>
+            )}
+            <div class="bb-body">
+              {shadows.length > 0 && (
+                <Fragment>
+                  <h3 class="sl-fig-name">Shadows</h3>
+                  <div class="sl-measures">{shadows.map((t) => <figure class="sl-measure"><div class="sl-measure-stage"><div class="sl-depth-box" style={`box-shadow:var(${t.name})`} /></div><figcaption><strong>{titleCase(t.name.replace(/^--(shadow-)?/, ""))}</strong><code class="sl-code">{t.name}</code></figcaption></figure>)}</div>
+                </Fragment>
+              )}
+              {/* sl:elevation — the site's depth motifs (overlays, separators) under an <h3 class="sl-fig-name">, each in a
+                  <div class="sl-stage"> with a caption that says what it is first, then {tok("--its-token")}: the
+                  token with its value, read at build. Never retype a value in words ("black at 20%"). */}
+              <h3 class="sl-fig-name">Dropdown panel</h3>
+              <p class="sl-note">The site's one shadow is under an open dropdown panel, which only opens from the header: hover or tab to About, History or Exploration in the Header story of the explorer. The panel is {tok("--space-panel")}.</p>
+              {roundedSpec.length > 0 && (
+                <Fragment>
+                  <h3 class="sl-fig-name">Corners</h3>
+                  <div class="sl-measures">{roundedSpec.map((t) => <figure class="sl-measure"><div class="sl-measure-stage"><div class="sl-corner-box" style={`border-radius:var(${t.prop}, ${t.value})`} /></div><figcaption><strong>{titleCase(t.prop.replace(/^--(radius-)?/, ""))}</strong> <span class="sl-measure-val">{t.value}</span><code class="sl-code">{t.prop}</code></figcaption></figure>)}</div>
+                </Fragment>
+              )}
+              {/* sl:shapes — dividers and brand shapes under an <h3 class="sl-fig-name">, each in a <div class="sl-stage">
+                  with a caption that says what it is first, then {tok("--its-token")}, never a retyped value */}
+              <h3 class="sl-fig-name">Success badge</h3>
+              <div class="sl-stage sl-shape-stage">
+                <span class="success-badge" aria-hidden="true"></span>
+                <p class="sl-shape-cap">The sign-up confirmation's badge: a green disc with a white check mark drawn from borders, so it carries no text.</p>
+              </div>
+              <h3 class="sl-fig-name">The left edge</h3>
+              <p class="sl-note">A callout's violet rule ({tok("--accent")}) and a message box's darker edge set a block apart from the text. See them in the Callout, Confirmation and Notice stories of the explorer.</p>
+            </div>
+          </section>
+
+          <section class="bb-chapter" id="components" data-sl-section="components">
+            <header class="bb-divider" style={`background:${bbInk};color:${bbPaper}`}><span class="bb-num">06</span><h2 class="bb-h">Components</h2></header>
+            {componentStory.length > 0 && <div class="bb-story"><div class="bb-prose" set:html={proseHtml(componentStory)} /></div>}
+            <div class="bb-body">
+              {sx.length > 0 ? (
+                <Fragment>
+                  <p class="sl-hint">Every component on its own, Storybook-style: a story is one variant. Choose a device width and a background, change its props under Controls, and copy its code. A component's name shows all its stories side by side; "Open alone" shows one at your window's width.</p>
+                  <div class="sx" data-sx id="explorer">
+                    <aside class="sx-side">
+                      <input class="sx-search" type="search" placeholder="Find a component" aria-label="Find a component" data-sx-search />
+                      <nav class="sx-tree" aria-label="Stories">
+                        {sxGroups.map(([g, entries]) => (
+                          <div class="sx-group" data-sx-group>
+                            <p class="sx-group-name">{g}</p>
+                            {entries.map((e) => (
+                              <div class="sx-entry" data-sx-entry data-sx-text={`${e.title} ${e.stories.map((st) => st.name).join(" ")}`.toLowerCase()}>
+                                <button type="button" class="sx-entry-name" data-sx-all={e.slug} title="All stories">{e.title}</button>
+                                {e.stories.map((st) => <a class="sx-story" href={`#explorer/${e.slug}/${st.slug}`} data-sx-story={`${e.slug}/${st.slug}`}>{st.name}</a>)}
+                              </div>
+                            ))}
+                          </div>
+                        ))}
+                      </nav>
+                    </aside>
+                    <div class="sx-main">
+                      <header class="sx-head"><p class="sx-crumb" data-sx-crumb /><h3 class="sx-title" data-sx-title /><p class="sx-desc" data-sx-desc /></header>
+                      <div class="sx-toolbar" role="toolbar" aria-label="Story view">
+                        <div class="sx-seg" aria-label="View"><button type="button" data-sx-mode="story" aria-pressed="true">Story</button><button type="button" data-sx-mode="all" aria-pressed="false">All stories</button></div>
+                        <div class="sx-seg" aria-label="Device width">{sxViewports.map(([k, label, w]) => <button type="button" data-sx-vp={k} aria-pressed="false">{label}{w && <span>{w}</span>}</button>)}</div>
+                        <div class="sx-bgs"><span class="sx-tool-label">Background</span><button type="button" class="sx-bg sx-bg--none" data-sx-bg="" title="The story's own" aria-pressed="true" />{brandColors.map((c) => <button type="button" class="sx-bg" data-sx-bg={c.hex} title={titleCase(c.name)} style={`background:${c.hex}`} aria-pressed="false" />)}</div>
+                        <span class="sx-scale" data-sx-scale />
+                        <a class="sx-open" data-sx-open target="_blank" rel="noopener">Open alone ↗</a>
+                      </div>
+                      <div class="sx-canvas" data-sx-canvas />
+                      <div class="sx-tabs" role="tablist">
+                        <button type="button" role="tab" data-sx-tab="controls" aria-selected="true">Controls</button>
+                        <button type="button" role="tab" data-sx-tab="props" aria-selected="false">Props</button>
+                        <button type="button" role="tab" data-sx-tab="code" aria-selected="false">Code</button>
+                        <button type="button" role="tab" data-sx-tab="used" aria-selected="false">Used on</button>
+                      </div>
+                      <div class="sx-panel" role="tabpanel" data-sx-panel />
+                    </div>
+                  </div>
+                  <script type="application/json" id="sx-data" is:inline set:html={sxData} />
+                </Fragment>
+              ) : (
+                <p class="sl-hint">No stories yet: they go in <code>src/components/design-system/stories.ts</code>.</p>
+              )}
+              {/* sl:components — below the explorer, what is not a story: the icon set, and a note where the
+                    site has no shared link style or form. Atoms are stories (stories.ts), never demos here.
+                    Older pages kept their atoms here, each subsection an <h3 class="sl-h3">:
+                    buttons and links in a <div class="sl-demo"> (and <div class="sl-demo sl-demo--dark">), each item
+                      <span><a class="btn …">Label</a><code class="sl-code">.btn</code></span>, a forced :hover look labelled;
+                    form fields: the real form, <div class="sl-formcard"><fieldset class="sl-form-guard" data-sl-form-guard disabled>
+                      <legend class="sl-sr">Preview only: this form does not submit</legend><Form id="sl-form" /></fieldset></div>;
+                    icons: <ul class="sl-icons"><li>…<code class="sl-code">name</code></li></ul>. */}
+              <h3 class="sl-fig-name">Buttons, forms and icons</h3>
+              <p class="sl-note">The site has no shared button or form style and no icon set. Its few buttons and form fields are the browser's own, or styled in place on their page (the newsletter's sign-up button on the Stay Updated page), so none is a story. Text links have one shared style: see the Text link story.</p>
+            </div>
+          </section>
+
+          {dosDonts.length > 0 && (
+            <section class="bb-chapter" id="dos">
+              <header class="bb-divider" style={`background:${bbAccent};color:${bbInk}`}><span class="bb-num">07</span><h2 class="bb-h">Do's &amp; don'ts</h2></header>
+              {doList.length > 0 || dontList.length > 0 ? (
+                <div class="bb-checks" style="margin-top:clamp(2.5rem, 5vw, 4rem)">
+                  <div><p class="bb-label">Do</p><ul class="bb-check">{doList.map((h) => <li set:html={h} />)}</ul></div>
+                  <div><p class="bb-label">Don't</p><ul class="bb-check bb-check--dont">{dontList.map((h) => <li set:html={h} />)}</ul></div>
+                </div>
+              ) : null}
+              {dosOther.length > 0 && <div class="bb-story"><div class="bb-prose" set:html={proseHtml(dosOther)} /></div>}
+            </section>
+          )}
+        </article>
+
+        {/* ============================================================================ APPENDIX == */}
+        <div class="sl-appendix">
+          <p class="sl-appendix-label">Appendix</p>
+
+          {slBlockGroups.length > 0 && (
+          <section id="blocks" data-sl-section="blocks">
+            <h2 class="sl-h2">{letterOf("blocks")}. Blocks</h2>
+            <p class="sl-hint">The reusable bands a new page is built from, one sample each with sample text, grouped by what they do. Open a card to see it.</p>
+            <div class="sl-toolbar"><button type="button" data-sl-toggle="open" data-sl-scope="#blocks">Expand all</button><button type="button" data-sl-toggle="close" data-sl-scope="#blocks">Collapse all</button></div>
+            {/* sl:blocks — per group (listed in slBlockGroups), in the order a page composes them:
+                  <h3 class="sl-h3" id="group-intro">Page intro</h3>
+                  <details class="sl-block" id="block-<name>">
+                    <summary><span class="sl-block-name">Block</span><span class="sl-block-desc">what it is, in a few words</span></summary>
+                    <p class="sl-block-meta"><code>&lt;Block prop /&gt;</code> · variants: … · used on <a href="/page/">/page/</a></p>
+                    <div class="sl-stage"><Block prop="sample text" /></div>
+                  </details>
+                Sample text, never a page's copy. A form inside a block goes in the guard. */}
+          </section>
+          )}
+
+          <section id="page-specific">
+            <h2 class="sl-h2">{letterOf("page-specific")}. Not in the explorer</h2>
+            <p class="sl-hint">Components the pages use that the explorer does not show, each with the reason.</p>
+            {Object.keys(slOmit).length > 0 ? (
+              <table class="sl-omit"><tbody>{Object.entries(slOmit).map(([name, why]) => <tr><td><code>{name}</code></td><td>{why}</td></tr>)}</tbody></table>
+            ) : (
+              <p class="sl-hint">None yet.</p>
+            )}
+          </section>
+
+          <section id="tokens">
+            <h2 class="sl-h2">{letterOf("tokens")}. Token reference</h2>
+            <p class="sl-hint">Every custom property in <code>src/styles/tokens.css</code>, generated at build.</p>
+            {groups.map(([k, label]) => {
+              const list = byKind.get(k)!;
+              if (!list.length) return null;
+              return (
+                <details class="sl-ref" id={`tokens-${k}`} data-sl-section={`tokens-${k}`}>
+                  <summary><strong>{label}</strong><span class="sl-block-desc">{list.length}</span></summary>
+                  {k === "color" || k === "gradient" ? (
+                    <div class="sl-swatches">
+                      {list.map((t) => (
+                        <figure class="sl-swatch">
+                          <div class="sl-chip"><span style={`background:${paint(t)}`} /></div>
+                          <figcaption><code class="sl-code">{t.name}</code><code class="sl-code">{t.value}</code>{role.has(t.name) && <span class="sl-role">{role.get(t.name)!.join(" · ")}</span>}</figcaption>
+                        </figure>
+                      ))}
+                    </div>
+                  ) : (
+                    <div class="sl-rows">
+                      {list.map((t) => (
+                        <div class="sl-row">
+                          <div><code class="sl-code">{t.name}</code><code class="sl-code">{t.value}</code></div>
+                          {k === "font" && <div class="sl-sample-text" style={`font-family:var(${t.name})`}>The quick brown fox jumps over the lazy dog 0123456789</div>}
+                          {k === "size" && <div class="sl-sample-text" style={`font-size:var(${t.name});line-height:1.2`}>Aa — The quick brown fox</div>}
+                          {k === "weight" && <div class="sl-sample-text" style={`font-weight:var(${t.name})`}>The quick brown fox jumps over the lazy dog</div>}
+                          {k === "leading" && <div class="sl-sample-text" style={`line-height:var(${t.name});max-width:40ch`}>The quick brown fox jumps over the lazy dog. The quick brown fox jumps over the lazy dog again, to show the line height.</div>}
+                          {k === "tracking" && <div class="sl-sample-text" style={`letter-spacing:var(${t.name});text-transform:uppercase`}>The quick brown fox</div>}
+                          {k === "space" && <div />}
+                          {k === "radius" && <div class="sl-box" style={`border-radius:var(${t.name})`} />}
+                          {k === "shadow" && <div class="sl-box" style={`box-shadow:var(${t.name});background:#fff`} />}
+                          {k === "other" && <div />}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </details>
+              );
+            })}
+          </section>
+
+          <section id="classes" data-sl-section="classes">
+            <h2 class="sl-h2">{letterOf("classes")}. Global classes</h2>
+            <details class="sl-ref">
+              <summary><strong>Every class in src/styles/global.css</strong><span class="sl-block-desc">{classes.length}</span></summary>
+              <div class="sl-classes">
+                {classes.map((c) => {
+                  const Tag = tagOf(c);
+                  return (
+                    <div class="sl-class">
+                      <code class="sl-code">.{withBase(c).split(" ").join(" .")}</code>
+                      <div class="sl-frame">
+                        <Tag class={withBase(c)} {...(Tag === "a" ? { href: "#classes" } : {})}>{Tag === "a" ? "Button label" : "The quick brown fox jumps over the lazy dog"}</Tag>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </details>
+          </section>
+        </div>
+      </main>
+    </div>
+    <style is:global>
+      /* ---- DESIGN.md's prose, set from its markdown (set:html, so these rules are global): lists, ###
+         subheads, tables and code, in the book's own type ---- */
+      .bb-prose p { margin: 0 0 1em; break-inside: avoid; }
+      .bb-prose .bb-prose-h { margin: 1.5em 0 .625em; padding: 0; color: inherit; font: 600 .75rem/1.3 var(--bb-text, system-ui, sans-serif); letter-spacing: .14em; text-transform: uppercase; break-after: avoid; }
+      .bb-prose .bb-prose-h:first-child { margin-top: 0; }
+      .bb-list, .bb-list ul, .bb-list ol { margin: 0 0 1em; padding: 0; }
+      .bb-list ul, .bb-list ol { margin: .4em 0 0; }
+      .bb-list li { margin: 0 0 .4em; break-inside: avoid; }
+      ul.bb-list, .bb-list ul { list-style: none; }
+      ul.bb-list > li, .bb-list ul > li { position: relative; padding-left: 1.4em; }
+      ul.bb-list > li::before, .bb-list ul > li::before { content: "—"; position: absolute; left: 0; color: var(--bb-accent); }
+      ol.bb-list, .bb-list ol { padding-left: 1.6em; list-style: decimal; }
+      ol.bb-list > li::marker, .bb-list ol > li::marker { font-weight: 600; font-variant-numeric: tabular-nums; }
+      /* a table or a code block spans the prose's two columns, and scrolls sideways on a phone */
+      .bb-table-wrap, .bb-pre, .bb-prose .bb-lead { column-span: all; }
+      /* the columns above a spanning block lose their last margin at the break: the lead keeps a gap */
+      .bb-prose .bb-lead:not(:first-child) { margin-top: 1.25em; }
+      .bb-table-wrap { margin: .75rem 0 2rem; overflow-x: auto; }
+      .bb-table-wrap:last-child { margin-bottom: 1em; }
+      /* the site's own table rules (a border, stripes) never reach the book's */
+      .bb-table { width: 100%; margin: 0; border: 0; border-collapse: collapse; background: none; font-size: .9375rem; line-height: 1.5; }
+      .bb-table th, .bb-table td { border: 0; background: none; }
+      .bb-table th { padding: 0 1.25rem .625rem 0; border-bottom: 2px solid var(--bb-ink, #1a1a1a); color: inherit; font: 600 .6875rem/1.3 var(--bb-text, system-ui, sans-serif); letter-spacing: .12em; text-align: left; text-transform: uppercase; vertical-align: bottom; }
+      .bb-table td { padding: .75rem 1.25rem .75rem 0; border-bottom: 1px solid #e5e5e5; vertical-align: top; }
+      .bb-table th:last-child, .bb-table td:last-child { padding-right: 0; }
+      .bb-pre { margin: .75rem 0 1.75rem; padding: 1rem 1.25rem; overflow-x: auto; border-radius: 6px; background: #f6f7f9; font: .8125rem/1.55 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre; }
+      /* ---- the Logo chapter: a small icon (favicon-32, favicon.ico) at twice its size; the cover's mark on
+         a paper tile, or rounded as an app icon when it paints its own ground ---- */
+      .bb-mark--small img { width: 64px; height: 64px; }
+      /* a tile's color-scheme matches its ground, so a scheme-adaptive SVG icon (Astro's starter
+         favicon.svg turns white under prefers-color-scheme: dark) stays visible on a light tile in a dark
+         OS (canary, alignwithjessica.com and one more; checked in Chrome 149) */
+      .bb-cover-mark--tile { box-sizing: border-box; padding: 12px; border-radius: 16px; background: var(--bb-paper); color-scheme: light; }
+      .bb-cover-mark--app { border-radius: 16px; }
+      /* ---- the explorer: a list or object prop, summarized, its JSON a click away; a named union's values ---- */
+      .sx-value > summary { color: #374151; font: .75rem/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; cursor: pointer; }
+      /* the JSON keeps its lines and scrolls inside the cell: no min-content width of its own (width 0, at
+         least the cell), so a long line never widens the table past the panel on a phone */
+      .sx-value .sx-code { box-sizing: border-box; width: 0; min-width: 100%; max-height: 18rem; margin-top: .5rem; padding: .75rem 1rem; overflow: auto; }
+      @media (max-width: 600px) { .sx-value .sx-code { white-space: pre; word-break: normal; } }
+      .sx-resolved { color: #6b7280; }
+    </style>
+    <script is:inline>
+      (function () {
+        /* forms never post: the guard enables the fields, keeps submit disabled, and cancels any
+           submit before the form's own handler sees it */
+        document.querySelectorAll("[data-sl-form-guard]").forEach(function (g) {
+          g.addEventListener("submit", function (e) { e.preventDefault(); e.stopImmediatePropagation(); }, true);
+          g.removeAttribute("disabled");
+          g.querySelectorAll('[type="submit"]').forEach(function (b) { b.disabled = true; b.title = "Disabled on the design system page"; });
+        });
+        /* a link to #block-x or #tokens-color opens that card (and any card around it) */
+        function openTo(id) {
+          var el = id && document.getElementById(decodeURIComponent(id));
+          if (!el) return;
+          for (var d = el; d; d = d.parentElement) if (d.tagName === "DETAILS") d.open = true;
+          el.scrollIntoView();
+        }
+        openTo(location.hash.slice(1));
+        addEventListener("hashchange", function () { openTo(location.hash.slice(1)); });
+        document.querySelectorAll("[data-sl-toggle]").forEach(function (b) {
+          b.addEventListener("click", function () {
+            var open = b.getAttribute("data-sl-toggle") === "open";
+            document.querySelectorAll(b.getAttribute("data-sl-scope") + " details").forEach(function (d) { d.open = open; });
+          });
+        });
+        /* mark the section in view in the sidebar */
+        var links = {};
+        document.querySelectorAll("[data-sl-nav]").forEach(function (a) { links[a.getAttribute("data-sl-nav")] = a; });
+        if ("IntersectionObserver" in window) {
+          var io = new IntersectionObserver(function (entries) {
+            entries.forEach(function (e) {
+              if (!e.isIntersecting) return;
+              Object.keys(links).forEach(function (k) { links[k].classList.toggle("is-current", k === e.target.id); });
+              /* on phones the contents are a scrolling strip: keep the current entry in it */
+              var nav = links[e.target.id] && links[e.target.id].parentElement;
+              if (nav && nav.scrollWidth > nav.clientWidth) nav.scrollLeft = links[e.target.id].offsetLeft - 16;
+            });
+          }, { rootMargin: "0px 0px -70% 0px" });
+          Object.keys(links).forEach(function (k) { var s = document.getElementById(k); if (s) io.observe(s); });
+        }
+      })();
+    </script>
+    <script is:inline>
+      /* the component explorer: frames a story's page (or, in "All stories", every story of the
+         component) at a device width, and builds the Controls, Props, Code and Used-on panels from
+         the JSON explorer.ts wrote */
+      (function () {
+        var dataEl = document.getElementById("sx-data"), root = document.querySelector("[data-sx]");
+        if (!dataEl || !root) return;
+        var D = JSON.parse(dataEl.textContent), byKey = {}, keys = [];
+        D.entries.forEach(function (e) { e.stories.forEach(function (st) { byKey[e.slug + "/" + st.slug] = { e: e, st: st }; keys.push(e.slug + "/" + st.slug); }); });
+        var $ = function (s) { return root.querySelector(s); };
+        var canvas = $("[data-sx-canvas]"), panel = $("[data-sx-panel]"), open = $("[data-sx-open]");
+        var VP = { phone: [390, 844], tablet: [768, 1024], desktop: [1440, 900] };
+        var S = { e: null, st: null, values: {}, vp: "fit", bg: "", tab: "controls", mode: "story" }, cells = [];
+        var esc = function (s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); };
+        var postTo = function (c, m) { m.type = "sl-story"; try { c.frame.contentWindow.postMessage(m, location.origin); } catch (_) {} };
+
+        /* an HTML story's markup for a set of args (explorer.ts's renderHtml, in the browser) */
+        function htmlOf(values) {
+          var c = S.e.controls;
+          return S.e.html.replace(/\{\{\s*([\w-]+)\s*\}\}/g, function (_, k) {
+            var ctl = c[k], v = values[k];
+            if (ctl && ctl.type === "boolean") return v ? ctl.on : ctl.off || "";
+            return !ctl || ctl.type === "text" ? esc(v) : String(v == null ? "" : v);
+          });
+        }
+        /* the page of a cell: the story's own, or (one story, a component) the combination the controls chose */
+        function idOf(c) {
+          if (S.mode === "all" || S.e.kind === "html") return c.st.combos[0].id;
+          var hit = c.st.combos.filter(function (x) { return Object.keys(x.values).every(function (k) { return x.values[k] === S.values[k]; }); })[0];
+          return hit ? hit.id : null;
+        }
+        function href(id) { return D.base + id + (D.tail ?? "/") + (S.bg ? "?bg=" + encodeURIComponent(S.bg) : ""); }
+        function load(c) {
+          var id = idOf(c);
+          if (!id) return false;
+          if (id !== c.id) { c.id = id; c.h = 160; c.frame.src = href(id); size(c); }
+          if (S.mode === "story") open.href = href(id);
+          return true;
+        }
+        function size(c) {
+          var full = c.st.layout === "fullscreen", avail = canvas.clientWidth - (innerWidth < 900 ? 24 : 40), vp = VP[S.vp];
+          var fitW = S.mode === "all" && !full && cells.length > 1 && avail > 640 ? Math.floor((avail - 24) / 2) : avail;
+          var w = vp ? vp[0] : fitW, h = full ? (vp ? vp[1] : Math.min(900, Math.round(innerHeight * .8))) : c.h;
+          var k = Math.min(1, (vp ? avail : fitW) / w);
+          c.frame.style.width = w + "px"; c.frame.style.height = h + "px"; c.frame.style.transform = k < 1 ? "scale(" + k + ")" : "";
+          c.wrap.style.width = Math.floor(w * k) + "px"; c.wrap.style.height = Math.ceil(h * k) + "px";
+          $("[data-sx-scale]").textContent = k < 1 ? "shown at " + Math.round(k * 100) + "%" : "";
+        }
+        /* each frame is named blink-compare:story before its src is set: the BlinkPages editor stays dormant in
+           a frame named blink-compare:… (the marker of its own compare panes), so a signed-in editor sees the
+           story, not a second admin bar inside it. "story" is no compare role, so no compare bridge starts. */
+        function build() {
+          var list = S.mode === "all" ? S.e.stories : [S.st];
+          canvas.classList.toggle("sx-canvas--all", S.mode === "all");
+          canvas.innerHTML = list.map(function (st) {
+            return '<figure class="sx-cell">' + (S.mode === "all" ? '<figcaption class="sx-cell-name">' + esc(st.name) + "</figcaption>" : "") +
+              '<div class="sx-frame-wrap"><iframe class="sx-frame" name="blink-compare:story" title="' + esc(S.e.title + " · " + st.name) + '" loading="lazy"></iframe></div></figure>';
+          }).join("");
+          cells = list.map(function (st, i) {
+            var fig = canvas.children[i], c = { st: st, frame: fig.querySelector("iframe"), wrap: fig.querySelector(".sx-frame-wrap"), h: 160, id: "" };
+            c.frame.addEventListener("load", function () {
+              if (S.e.kind === "html") postTo(c, { html: htmlOf(S.mode === "all" ? c.st.args : S.values) });
+              if (S.bg) postTo(c, { bg: S.bg });
+            });
+            return c;
+          });
+          cells.forEach(function (c) { load(c); size(c); });
+          open.hidden = S.mode === "all";
+        }
+        function controlsHtml() {
+          var e = S.e, rows = [];
+          if (S.mode === "all") return '<p class="sx-note">Every story of ' + esc(e.title) + ", each with its own props. Choose one in the list to change its controls.</p>";
+          if (e.kind === "html") {
+            Object.keys(e.controls).forEach(function (k) {
+              var c = e.controls[k], v = S.values[k], input;
+              if (c.type === "select") input = '<select data-sx-ctl="' + esc(k) + '">' + Object.keys(c.options).map(function (label) { var val = c.options[label]; return '<option value="' + esc(val) + '"' + (val === (v == null ? "" : v) ? " selected" : "") + ">" + esc(label) + "</option>"; }).join("") + "</select>";
+              else if (c.type === "boolean") input = '<label><input type="checkbox" data-sx-ctl="' + esc(k) + '"' + (v ? " checked" : "") + '> <span class="sx-note">adds <code>.' + esc(c.on) + "</code></span></label>";
+              else input = '<input type="text" data-sx-ctl="' + esc(k) + '" value="' + esc(v) + '">';
+              rows.push('<tr><th scope="row">' + esc(k) + "</th><td>" + input + "</td></tr>");
+            });
+          } else {
+            e.props.forEach(function (p) {
+              var v = S.values[p.name], a = S.st.args[p.name], input, dflt = p.default && p.default.replace(/^(["'`])(.*)\1$/, "$2");
+              /* an optional enum can stay unset ("(not set)", the component's own default); the default option says so */
+              if (p.control === "select") input = '<select data-sx-ctl="' + esc(p.name) + '">' + (p.unset ? "<option data-sx-unset" + (v === null ? " selected" : "") + ">(not set)</option>" : "") + p.options.map(function (o) { return '<option value="' + esc(o) + '"' + (o === v ? " selected" : "") + ">" + esc(o) + (o === dflt ? " (default)" : "") + "</option>"; }).join("") + "</select>";
+              else if (p.control === "boolean") input = '<label><input type="checkbox" data-sx-ctl="' + esc(p.name) + '"' + (v ? " checked" : "") + "></label>";
+              else input = a === undefined ? '<span class="sx-note">' + (p.default !== undefined ? "default " + esc(p.default) : "not set") + "</span>" : valueHtml(a);
+              rows.push('<tr><th scope="row">' + esc(p.name) + "</th><td>" + input + "</td></tr>");
+            });
+          }
+          if (!rows.length) return '<p class="sx-note">' + (e.kind === "html" ? "No controls." : "This component takes no props: it renders the same wherever it is used. Its variants are its device widths: try Phone, Tablet and Desktop above.") + "</p>";
+          return '<table class="sx-table"><tbody>' + rows.join("") + "</tbody></table>" + (e.kind === "component"
+            ? '<p class="sx-note">A list or a switch shows each pre-rendered combination. Text props show the story\'s sample copy.</p><p class="sx-note" data-sx-miss hidden>That combination is not pre-rendered: past 24 combinations the explorer renders one change at a time from the story. Change one control from the story\'s own values.</p>'
+            : "");
+        }
+        /* a prop's value, readable: short text inline; a list or an object summarized by its size and keys,
+           its JSON a click away (a case study's props printed 600 characters on one line, evgnagency 2026-11-03).
+           Only an enum or a switch re-renders a component here, so these are shown, not edited */
+        function keysOf(o) { var k = Object.keys(o); return "{ " + k.slice(0, 6).map(esc).join(", ") + (k.length > 6 ? ", … " + (k.length - 6) + " more" : "") + " }"; }
+        function valueHtml(a) {
+          var json = typeof a === "string" ? a : JSON.stringify(a, null, 2), sum;
+          if (Array.isArray(a)) sum = a.length + (a.length === 1 ? " item" : " items") + (a[0] && typeof a[0] === "object" && !Array.isArray(a[0]) ? ", each " + keysOf(a[0]) : "");
+          else if (a && typeof a === "object") sum = keysOf(a);
+          else if (json.length <= 90) return "<code>" + esc(json) + "</code>";
+          else sum = esc(json.slice(0, 72)) + "…";
+          return '<details class="sx-value"><summary>' + sum + '</summary><pre class="sx-code">' + esc(json) + "</pre></details>";
+        }
+        function propsHtml() {
+          var e = S.e;
+          if (e.kind === "html") return '<table class="sx-table"><thead><tr><th>Control</th><th>Kind</th><th>Values</th></tr></thead><tbody>' + Object.keys(e.controls).map(function (k) { var c = e.controls[k]; return "<tr><td><code>" + esc(k) + "</code></td><td>" + esc(c.type) + "</td><td>" + (c.type === "select" ? Object.keys(c.options).map(function (l) { return esc(l) + " <code>" + esc(c.options[l] || "(none)") + "</code>"; }).join(", ") : c.type === "boolean" ? "adds <code>." + esc(c.on) + "</code>" : "text") + "</td></tr>"; }).join("") + '</tbody></table><p class="sx-note">Markup and global classes, no component: the Code tab has the markup.</p>';
+          if (!e.props.length) return '<p class="sx-note"><code>' + esc(e.component) + "</code> declares no props.</p>";
+          return '<table class="sx-table"><thead><tr><th>Name</th><th>Type</th><th>Default</th><th>Description</th></tr></thead><tbody>' + e.props.map(function (p) { return "<tr><td><code>" + esc(p.name) + (p.optional ? "?" : "") + "</code></td><td><code>" + esc(p.type) + "</code>" + (p.resolved ? '<br><code class="sx-resolved">' + esc(p.resolved) + "</code>" : "") + "</td><td>" + (p.default !== undefined ? "<code>" + esc(p.default) + "</code>" : "—") + "</td><td>" + esc(p.description || "") + "</td></tr>"; }).join("") + "</tbody></table>";
+        }
+        function codeOf(st, values) {
+          var e = S.e;
+          if (e.kind === "html") return htmlOf(values);
+          var name = e.component.split("/").pop().replace(/\.astro$/, ""), args = Object.assign({}, st.args, values);
+          /* an enum left unset is left out; a long list or object is set out over lines, one attribute a line */
+          var attrs = Object.keys(args).filter(function (k) { return args[k] !== null && args[k] !== undefined; }).map(function (k) {
+            var v = args[k], j = JSON.stringify(v);
+            return v === true ? k : v === false ? k + "={false}" : typeof v === "string" ? k + '="' + v.replace(/"/g, "&quot;") + '"' : k + "={" + (j.length > 60 ? JSON.stringify(v, null, 2).replace(/\n/g, "\n  ") : j) + "}";
+          });
+          var tall = attrs.some(function (x) { return x.indexOf("\n") !== -1; });
+          return "<" + name + (attrs.length ? (tall ? "\n  " + attrs.join("\n  ") + "\n" : " " + attrs.join(" ")) : "") + (st.slot ? ">" + st.slot + "</" + name + ">" : tall ? "/>" : " />");
+        }
+        function codeText() {
+          var e = S.e, head = e.kind === "component" ? "import " + e.component.split("/").pop().replace(/\.astro$/, "") + ' from "../components/' + e.component + '";\n\n' : "";
+          if (S.mode === "all") return head + e.stories.map(function (st) { return (e.kind === "html" ? "<!-- " : "{/* ") + st.name + (e.kind === "html" ? " -->" : " */}") + "\n" + codeOf(st, e.kind === "html" ? st.args : st.combos[0].values); }).join("\n\n");
+          return head + codeOf(S.st, S.values);
+        }
+        function render() {
+          var e = S.e, t = S.tab;
+          root.querySelectorAll("[data-sx-tab]").forEach(function (b) { b.setAttribute("aria-selected", String(b.getAttribute("data-sx-tab") === t)); });
+          panel.innerHTML = t === "controls" ? controlsHtml() : t === "props" ? propsHtml()
+            : t === "code" ? '<div class="sx-codebox"><button type="button" class="sx-copy" data-sx-copy>Copy</button><pre class="sx-code">' + esc(codeText()) + "</pre></div>"
+            : e.usedOn.length ? '<ul class="sx-used">' + e.usedOn.map(function (u) { return "<li>" + (u.href ? '<a href="' + esc(u.href) + '">' + esc(u.label) + "</a>" : esc(u.label)) + "</li>"; }).join("") + "</ul>"
+            : '<p class="sx-note">' + (e.kind === "html" ? "Global classes: any page may use this markup." : "No page imports it yet.") + "</p>";
+        }
+        function press(attr, val) { root.querySelectorAll("[" + attr + "]").forEach(function (b) { b.setAttribute("aria-pressed", String(b.getAttribute(attr) === val)); }); }
+        function select(key, mode, user) {
+          var hit = byKey[key] || byKey[keys[0]];
+          if (!hit) return;
+          S.e = hit.e; S.st = hit.st; S.mode = mode;
+          S.values = Object.assign({}, hit.e.kind === "html" ? hit.st.args : hit.st.combos[0].values);
+          S.vp = hit.st.layout === "fullscreen" ? "desktop" : "fit";
+          var k = hit.e.slug + "/" + hit.st.slug;
+          root.querySelectorAll("[data-sx-story]").forEach(function (a) { var on = mode === "story" && a.getAttribute("data-sx-story") === k; a.classList.toggle("is-current", on); if (on) a.setAttribute("aria-current", "true"); else a.removeAttribute("aria-current"); });
+          root.querySelectorAll("[data-sx-all]").forEach(function (b) { b.classList.toggle("is-current", mode === "all" && b.getAttribute("data-sx-all") === hit.e.slug); });
+          $("[data-sx-crumb]").textContent = hit.e.group + (mode === "all" ? "" : " / " + hit.e.title);
+          $("[data-sx-title]").textContent = mode === "all" ? hit.e.title : hit.st.name;
+          $("[data-sx-desc]").textContent = [hit.e.description, mode === "all" ? "" : hit.st.note].filter(Boolean).join(" ");
+          press("data-sx-vp", S.vp); press("data-sx-mode", mode);
+          build(); render();
+          if (user && history.replaceState) history.replaceState(null, "", "#explorer/" + (mode === "all" ? hit.e.slug : k));
+        }
+
+        addEventListener("message", function (ev) {
+          if (!ev.data || ev.data.type !== "sl-story-size") return;
+          cells.forEach(function (c) { if (ev.source === c.frame.contentWindow) { c.h = Math.max(96, Math.ceil(ev.data.h)); size(c); } });
+        });
+        addEventListener("resize", function () { cells.forEach(size); });
+        root.addEventListener("click", function (ev) {
+          var t = ev.target.closest ? ev.target.closest("[data-sx-story],[data-sx-all],[data-sx-mode],[data-sx-vp],[data-sx-bg],[data-sx-tab],[data-sx-copy]") : null;
+          if (!t) return;
+          if (t.hasAttribute("data-sx-story")) { ev.preventDefault(); select(t.getAttribute("data-sx-story"), "story", true); }
+          else if (t.hasAttribute("data-sx-all")) { var e = D.entries.filter(function (x) { return x.slug === t.getAttribute("data-sx-all"); })[0]; if (e) select(e.slug + "/" + e.stories[0].slug, "all", true); }
+          else if (t.hasAttribute("data-sx-mode")) select(S.e.slug + "/" + S.st.slug, t.getAttribute("data-sx-mode"), true);
+          else if (t.hasAttribute("data-sx-vp")) { S.vp = t.getAttribute("data-sx-vp"); press("data-sx-vp", S.vp); cells.forEach(size); }
+          else if (t.hasAttribute("data-sx-bg")) { S.bg = t.getAttribute("data-sx-bg"); press("data-sx-bg", S.bg); cells.forEach(function (c) { postTo(c, { bg: S.bg || c.st.background || "" }); }); if (cells[0] && cells[0].id) open.href = href(cells[0].id); }
+          else if (t.hasAttribute("data-sx-tab")) { S.tab = t.getAttribute("data-sx-tab"); render(); }
+          else if (navigator.clipboard) navigator.clipboard.writeText(codeText()).then(function () { t.textContent = "Copied"; });
+        });
+        function onControl(ev) {
+          var t = ev.target, k = t.getAttribute && t.getAttribute("data-sx-ctl");
+          if (!k || !cells[0]) return;
+          S.values[k] = t.type === "checkbox" ? t.checked : t.selectedOptions && t.selectedOptions[0] && t.selectedOptions[0].hasAttribute("data-sx-unset") ? null : t.value;
+          if (S.e.kind === "html") { postTo(cells[0], { html: htmlOf(S.values) }); return; }
+          if (ev.type !== "change") return;
+          var miss = panel.querySelector("[data-sx-miss]"), ok = load(cells[0]);
+          if (miss) miss.hidden = ok;
+        }
+        panel.addEventListener("input", onControl);
+        panel.addEventListener("change", onControl);
+        $("[data-sx-search]").addEventListener("input", function (ev) {
+          var q = ev.target.value.trim().toLowerCase();
+          root.querySelectorAll("[data-sx-entry]").forEach(function (el) { el.hidden = q !== "" && el.getAttribute("data-sx-text").indexOf(q) === -1; });
+          root.querySelectorAll("[data-sx-group]").forEach(function (g) { g.hidden = !g.querySelector("[data-sx-entry]:not([hidden])"); });
+        });
+        /* #explorer/<component> opens All stories, #explorer/<component>/<story> one story */
+        function fromHash() {
+          if (location.hash.indexOf("#explorer/") !== 0) return null;
+          var k = decodeURIComponent(location.hash.slice(10));
+          if (byKey[k]) return [k, "story"];
+          var e = D.entries.filter(function (x) { return x.slug === k; })[0];
+          return e ? [e.slug + "/" + e.stories[0].slug, "all"] : null;
+        }
+        addEventListener("hashchange", function () { var h = fromHash(); if (h) { select(h[0], h[1], false); document.getElementById("explorer").scrollIntoView(); } });
+        var start = fromHash();
+        select(start ? start[0] : keys[0], start ? start[1] : "story", false);
+        if (start) document.getElementById("explorer").scrollIntoView();
+      })();
+    </script>
+  </body>
+</html>
